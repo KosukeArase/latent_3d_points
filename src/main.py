@@ -1,13 +1,13 @@
 import os.path as osp
 
-from ae_templates import mlp_architecture_ala_iclr_18, default_train_params
-from autoencoder import Configuration as Conf
-from point_net_ae import PointNetAutoEncoder
+from src.ae_templates import mlp_architecture_ala_iclr_18, default_train_params
+from src.autoencoder import Configuration as Conf
+from src.point_net_ae import PointNetAutoEncoder
 
-from in_out import snc_category_to_synth_id, create_dir, PointCloudDataSet, \
+from src.in_out import snc_category_to_synth_id, create_dir, PointCloudDataSet, \
                                         load_all_point_clouds_under_folder
 
-from tf_utils import reset_tf_graph
+from src.tf_utils import reset_tf_graph
 
 
 def get_conf(class_name):

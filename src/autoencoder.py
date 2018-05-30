@@ -11,9 +11,9 @@ import numpy as np
 
 from tflearn import is_training
 
-from . in_out import create_dir, pickle_data, unpickle_data
-from . general_utils import apply_augmentations, iterate_in_chunks
-from . neural_net import Neural_Net
+from in_out import create_dir, pickle_data, unpickle_data
+from general_utils import apply_augmentations, iterate_in_chunks
+from neural_net import Neural_Net
 
 model_saver_id = 'models.ckpt'
 

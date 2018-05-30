@@ -9,7 +9,7 @@ import time
 import tensorflow as tf
 from tflearn import is_training
 
-from . gan import GAN
+from gan import GAN
 from .. fundamentals.layers import safe_log
 
 

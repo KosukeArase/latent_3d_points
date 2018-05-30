@@ -16,7 +16,7 @@ import numpy as np
 import warnings
 
 from scipy.stats import entropy
-from . general_utils import iterate_in_chunks, unit_cube_grid_point_cloud
+from general_utils import iterate_in_chunks, unit_cube_grid_point_cloud
 
 try:
     from sklearn.neighbors import NearestNeighbors

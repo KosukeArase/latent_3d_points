@@ -7,7 +7,7 @@ import numpy as np
 import time
 import tensorflow as tf
 
-from . gan import GAN
+from gan import GAN
 
 from .. fundamentals.layers import safe_log
 from tflearn import is_training

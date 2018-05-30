@@ -24,8 +24,8 @@ except:
     print ('Sklearn module not installed (JSD metric will not work).')
 
 try:    
-    from .. external.structural_losses.tf_nndistance import nn_distance
-    from .. external.structural_losses.tf_approxmatch import approx_match, match_cost
+    from external.structural_losses.tf_nndistance import nn_distance
+    from external.structural_losses.tf_approxmatch import approx_match, match_cost
 except:
     print('External Losses (Chamfer-EMD) cannot be loaded. Please install them first.')
     

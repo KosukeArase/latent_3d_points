@@ -11,8 +11,8 @@ from src.tf_utils import reset_tf_graph
 
 
 def get_conf(class_name):
-    top_out_dir = '../data/'          # Use to save Neural-Net check-points etc.
-    top_in_dir = '../data/shape_net_core_uniform_samples_2048/' # Top-dir of where point-clouds are stored.
+    top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
+    top_in_dir = './data/shape_net_core_uniform_samples_2048/' # Top-dir of where point-clouds are stored.
 
     experiment_name = 'single_class_ae'
     n_pc_points = 2048                # Number of points per model.

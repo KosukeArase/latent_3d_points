@@ -39,7 +39,9 @@ class PointNetAutoEncoder(AutoEncoder):
 
             self.bottleneck_size = int(self.z.get_shape()[1])
             layer = c.decoder(self.z, **c.decoder_args)
+            c.decoder_args['reuse'] = True
             vlayer = c.decoder(self.vz, **c.decoder_args)
+            c.decoder_args['reuse'] = False
             
             if c.exists_and_is_not_none('close_with_tanh'):
                 layer = tf.nn.tanh(layer)

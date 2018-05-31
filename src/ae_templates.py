@@ -41,7 +41,7 @@ def mlp_architecture_ala_iclr_18(n_pc_points, bneck_size, bneck_post_mlp=False):
 
 def default_train_params(single_class=True):
     params = {'batch_size': 50,
-              'training_epochs': 500,
+              'training_epochs': 5,
               'denoising': False,
               'learning_rate': 0.0005,
               'z_rotate': False,

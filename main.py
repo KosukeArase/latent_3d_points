@@ -13,7 +13,7 @@ from src.tf_utils import reset_tf_graph
 def get_conf(class_name):
     top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
 
-    experiment_name = 'single_class_ae'
+    experiment_name = 'single_class_{}_ae'.format(class_name)
     n_pc_points = 2048                # Number of points per model.
     bneck_size = 128                  # Bottleneck-AE size
     ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
@@ -53,11 +53,11 @@ def get_conf(class_name):
 def main():
     class_name = raw_input('Give me the class name (e.g. "chair"): ').lower()
     conf = get_conf(class_name)
-    top_in_dir = './data/shape_net_core_uniform_samples_2048/' # Top-dir of where point-clouds are stored.
+    train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
+    # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
+    test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
 
-    syn_id = snc_category_to_synth_id()[class_name]
-    class_dir = osp.join(top_in_dir , syn_id)
-    all_pc_data = load_all_point_clouds_under_folder(class_dir, n_threads=8, file_ending='.ply', verbose=True)
+    all_pc_data = load_all_point_clouds_under_folder(train_dir, n_threads=1, file_ending='.ply', verbose=True)
 
     reset_tf_graph()
     ae = PointNetAutoEncoder(conf.experiment_name, conf)

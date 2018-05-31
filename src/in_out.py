@@ -4,6 +4,7 @@ import numpy as np
 import os
 import os.path as osp
 import re
+import glob
 from six.moves import cPickle
 from multiprocessing import Pool
 
@@ -100,34 +101,68 @@ def load_ply(file_name, with_faces=False, with_color=False):
     return ret_val
 
 
+def load_txt(file_name, with_faces=False, with_color=False):
+    n_points = 2048
+
+    if with_faces or with_color:
+        raise NotImplementedError
+    else:
+        with open(file_name, 'r') as f:
+            lines = f.readlines()
+
+    if len(lines) < 2048:
+        return None
+    else:
+        points = np.array([list(map(float, line.split()[:3])) for line in lines])
+        points = points[np.random.choice(points.shape[0], n_points, replace = False)]
+        mean = np.mean(points, axis=0)
+        std = np.std(points, axis=0)
+        points = (points - mean) / std
+
+        return points
+
+
 def pc_loader(f_name):
     ''' loads a point-cloud saved under ShapeNet's "standar" folder scheme: 
     i.e. /syn_id/model_name.ply
     '''
-    tokens = f_name.split('/')
-    model_id = tokens[-1].split('.')[0]
-    synet_id = tokens[-2]
-    return load_ply(f_name), model_id, synet_id
+    tokens = f_name.split('.')[1].split('/')
+    model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
+    synet_id = tokens[5].split('_')[0]
+
+    return load_txt(f_name), model_id, synet_id
 
 
 def load_all_point_clouds_under_folder(top_dir, n_threads=20, file_ending='.ply', verbose=False):
-    file_names = [f for f in files_in_subdirs(top_dir, file_ending)]
+    file_names = glob.glob(top_dir) # [f for f in files_in_subdirs(top_dir, file_ending)]
+    print('Loading {} data'.format(len(file_names)))
     pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
     return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
 
 
 def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=False):
-    pc = loader(file_names[0])[0]
-    pclouds = np.empty([len(file_names), pc.shape[0], pc.shape[1]], dtype=np.float32)
+    n_points = 2048
+    n_features = 3 # XYZ
+    pclouds = np.empty([len(file_names), n_points, n_features], dtype=np.float32)
     model_names = np.empty([len(file_names)], dtype=object)
     class_ids = np.empty([len(file_names)], dtype=object)
     pool = Pool(n_threads)
+    skipped = 0
 
     for i, data in enumerate(pool.imap(loader, file_names)):
-        pclouds[i, :, :], model_names[i], class_ids[i] = data
+        if data[0] is None:
+            print(data[1:], "was skipped since it doesn't have enough points")
+            skipped += 1
+            continue
+        else:
+            pclouds[i-skipped, :, :], model_names[i-skipped], class_ids[i-skipped] = data
 
     pool.close()
     pool.join()
+
+    pclouds = pclouds[:len(file_names)-skipped]
+    model_names = model_names[:len(file_names)-skipped]
+    class_ids = class_ids[:len(file_names)-skipped]
 
     if len(np.unique(model_names)) != len(pclouds):
         warnings.warn('Point clouds with the same model name were loaded.')

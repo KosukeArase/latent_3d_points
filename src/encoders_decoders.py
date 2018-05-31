@@ -35,50 +35,49 @@ def embedder_with_convs_and_symmetry(in_signal, n_filters=[64, 128, 256, 1024], 
     if n_layers < 2:
         raise ValueError('More than 1 layers are expected.')
 
-    with tf.variable_scope("embedder", reuse = reuse):
-        for i in xrange(n_layers):
-            if i == 0:
-                layer = in_signal
+    for i in xrange(n_layers):
+        if i == 0:
+            layer = in_signal
 
-            name = 'embedder_conv_layer_' + str(i)
+        name = 'embedder_conv_layer_' + str(i)
+        scope_i = expand_scope_by_name(scope, name)
+        layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i], strides=strides[i], regularizer=regularizer,
+                        weight_decay=weight_decay, name=name, reuse=reuse, scope=scope_i, padding=padding)
+
+        if verbose:
+            print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+
+        if b_norm:
+            name += '_bnorm'
             scope_i = expand_scope_by_name(scope, name)
-            layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i], strides=strides[i], regularizer=regularizer,
-                            weight_decay=weight_decay, name=name, reuse=reuse, scope=scope_i, padding=padding)
-
+            layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
             if verbose:
-                print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+                print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
 
-            if b_norm:
-                name += '_bnorm'
-                scope_i = expand_scope_by_name(scope, name)
-                layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
-                if verbose:
-                    print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
+        if non_linearity is not None:
+            layer = non_linearity(layer)
 
-            if non_linearity is not None:
-                layer = non_linearity(layer)
+        if pool is not None and pool_sizes is not None:
+            if pool_sizes[i] is not None:
+                layer = pool(layer, kernel_size=pool_sizes[i])
 
-            if pool is not None and pool_sizes is not None:
-                if pool_sizes[i] is not None:
-                    layer = pool(layer, kernel_size=pool_sizes[i])
+        if dropout_prob is not None and dropout_prob[i] > 0:
+            layer = dropout(layer, 1.0 - dropout_prob[i])
 
-            if dropout_prob is not None and dropout_prob[i] > 0:
-                layer = dropout(layer, 1.0 - dropout_prob[i])
+        if verbose:
+            print layer
+            print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
 
-            if verbose:
-                print layer
-                print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
-
-        if symmetry is not None:
-            layer = symmetry(layer, axis=1)
-            if verbose:
-                print layer
-
-        if closing is not None:
-            layer = closing(layer)
+    if symmetry is not None:
+        layer = symmetry(layer, axis=1)
+        if verbose:
             print layer
 
-        return layer
+    if closing is not None:
+        layer = closing(layer)
+        print layer
+
+    return layer
 
 
 def encoder_with_convs_and_symmetry(in_signal, n_filters=[64, 128, 256, 1024], filter_sizes=[1], strides=[1],
@@ -99,50 +98,49 @@ def encoder_with_convs_and_symmetry(in_signal, n_filters=[64, 128, 256, 1024], f
     if n_layers < 2:
         raise ValueError('More than 1 layers are expected.')
 
-    with tf.variable_scope("encoder", reuse = reuse):
-        for i in xrange(n_layers):
-            if i == 0:
-                layer = in_signal
+    for i in xrange(n_layers):
+        if i == 0:
+            layer = in_signal
 
-            name = 'encoder_conv_layer_' + str(i)
+        name = 'encoder_conv_layer_' + str(i)
+        scope_i = expand_scope_by_name(scope, name)
+        layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i], strides=strides[i], regularizer=regularizer,
+                        weight_decay=weight_decay, name=name, reuse=reuse, scope=scope_i, padding=padding)
+
+        if verbose:
+            print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+
+        if b_norm:
+            name += '_bnorm'
             scope_i = expand_scope_by_name(scope, name)
-            layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i], strides=strides[i], regularizer=regularizer,
-                            weight_decay=weight_decay, name=name, reuse=reuse, scope=scope_i, padding=padding)
-
+            layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
             if verbose:
-                print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+                print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
 
-            if b_norm:
-                name += '_bnorm'
-                scope_i = expand_scope_by_name(scope, name)
-                layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
-                if verbose:
-                    print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
+        if non_linearity is not None:
+            layer = non_linearity(layer)
 
-            if non_linearity is not None:
-                layer = non_linearity(layer)
+        if pool is not None and pool_sizes is not None:
+            if pool_sizes[i] is not None:
+                layer = pool(layer, kernel_size=pool_sizes[i])
 
-            if pool is not None and pool_sizes is not None:
-                if pool_sizes[i] is not None:
-                    layer = pool(layer, kernel_size=pool_sizes[i])
+        if dropout_prob is not None and dropout_prob[i] > 0:
+            layer = dropout(layer, 1.0 - dropout_prob[i])
 
-            if dropout_prob is not None and dropout_prob[i] > 0:
-                layer = dropout(layer, 1.0 - dropout_prob[i])
+        if verbose:
+            print layer
+            print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
 
-            if verbose:
-                print layer
-                print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
-
-        if symmetry is not None:
-            layer = symmetry(layer, axis=1)
-            if verbose:
-                print layer
-
-        if closing is not None:
-            layer = closing(layer)
+    if symmetry is not None:
+        layer = symmetry(layer, axis=1)
+        if verbose:
             print layer
 
-        return layer
+    if closing is not None:
+        layer = closing(layer)
+        print layer
+
+    return layer
 
 
 def decoder_with_fc_only(latent_signal, layer_sizes=[], b_norm=True, non_linearity=tf.nn.relu,
@@ -159,55 +157,54 @@ def decoder_with_fc_only(latent_signal, layer_sizes=[], b_norm=True, non_lineari
     if n_layers < 2:
         raise ValueError('For an FC decoder with single a layer use simpler code.')
 
-    with tf.variable_scope("decoder", reuse = reuse):
-        for i in xrange(0, n_layers - 1):
-            name = 'decoder_fc_' + str(i)
-            scope_i = expand_scope_by_name(scope, name)
-
-            if i == 0:
-                layer = latent_signal
-
-            layer = fully_connected(layer, layer_sizes[i], activation='linear', weights_init='xavier', name=name, regularizer=regularizer, weight_decay=weight_decay, reuse=reuse, scope=scope_i)
-
-            if verbose:
-                print name, 'FC params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
-
-            if b_norm:
-                name += '_bnorm'
-                scope_i = expand_scope_by_name(scope, name)
-                layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
-                if verbose:
-                    print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
-
-            if non_linearity is not None:
-                layer = non_linearity(layer)
-
-            if dropout_prob is not None and dropout_prob[i] > 0:
-                layer = dropout(layer, 1.0 - dropout_prob[i])
-
-            if verbose:
-                print layer
-                print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
-
-        # Last decoding layer never has a non-linearity.
-        name = 'decoder_fc_' + str(n_layers - 1)
+    for i in xrange(0, n_layers - 1):
+        name = 'decoder_fc_' + str(i)
         scope_i = expand_scope_by_name(scope, name)
-        layer = fully_connected(layer, layer_sizes[n_layers - 1], activation='linear', weights_init='xavier', name=name, regularizer=regularizer, weight_decay=weight_decay, reuse=reuse, scope=scope_i)
+
+        if i == 0:
+            layer = latent_signal
+
+        layer = fully_connected(layer, layer_sizes[i], activation='linear', weights_init='xavier', name=name, regularizer=regularizer, weight_decay=weight_decay, reuse=reuse, scope=scope_i)
+
         if verbose:
             print name, 'FC params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
 
-        if b_norm_finish:
+        if b_norm:
             name += '_bnorm'
             scope_i = expand_scope_by_name(scope, name)
             layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
             if verbose:
                 print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
 
+        if non_linearity is not None:
+            layer = non_linearity(layer)
+
+        if dropout_prob is not None and dropout_prob[i] > 0:
+            layer = dropout(layer, 1.0 - dropout_prob[i])
+
         if verbose:
             print layer
             print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
 
-        return layer
+    # Last decoding layer never has a non-linearity.
+    name = 'decoder_fc_' + str(n_layers - 1)
+    scope_i = expand_scope_by_name(scope, name)
+    layer = fully_connected(layer, layer_sizes[n_layers - 1], activation='linear', weights_init='xavier', name=name, regularizer=regularizer, weight_decay=weight_decay, reuse=reuse, scope=scope_i)
+    if verbose:
+        print name, 'FC params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+
+    if b_norm_finish:
+        name += '_bnorm'
+        scope_i = expand_scope_by_name(scope, name)
+        layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
+        if verbose:
+            print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
+
+    if verbose:
+        print layer
+        print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
+
+    return layer
 
 
 def decoder_with_convs_only(in_signal, n_filters, filter_sizes, strides, padding='same', b_norm=True, non_linearity=tf.nn.relu,
@@ -222,39 +219,38 @@ def decoder_with_convs_only(in_signal, n_filters, filter_sizes, strides, padding
     strides = replicate_parameter_for_all_layers(strides, n_layers)
     dropout_prob = replicate_parameter_for_all_layers(dropout_prob, n_layers)
 
-    with tf.variable_scope("decoder", reuse = reuse):
-        for i in xrange(n_layers):
-            if i == 0:
-                layer = in_signal
+    for i in xrange(n_layers):
+        if i == 0:
+            layer = in_signal
 
-            name = 'decoder_conv_layer_' + str(i)
+        name = 'decoder_conv_layer_' + str(i)
+        scope_i = expand_scope_by_name(scope, name)
+
+        layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i],
+                        strides=strides[i], padding=padding, regularizer=regularizer, weight_decay=weight_decay,
+                        name=name, reuse=reuse, scope=scope_i)
+
+        if verbose:
+            print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+
+        if (b_norm and i < n_layers - 1) or (i == n_layers - 1 and b_norm_finish):
+            name += '_bnorm'
             scope_i = expand_scope_by_name(scope, name)
-
-            layer = conv_op(layer, nb_filter=n_filters[i], filter_size=filter_sizes[i],
-                            strides=strides[i], padding=padding, regularizer=regularizer, weight_decay=weight_decay,
-                            name=name, reuse=reuse, scope=scope_i)
-
+            layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
             if verbose:
-                print name, 'conv params = ', np.prod(layer.W.get_shape().as_list()) + np.prod(layer.b.get_shape().as_list()),
+                print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
 
-            if (b_norm and i < n_layers - 1) or (i == n_layers - 1 and b_norm_finish):
-                name += '_bnorm'
-                scope_i = expand_scope_by_name(scope, name)
-                layer = batch_normalization(layer, name=name, reuse=reuse, scope=scope_i)
-                if verbose:
-                    print 'bnorm params = ', np.prod(layer.beta.get_shape().as_list()) + np.prod(layer.gamma.get_shape().as_list())
+        if non_linearity is not None and i < n_layers - 1:  # Last layer doesn't have a non-linearity.
+            layer = non_linearity(layer)
 
-            if non_linearity is not None and i < n_layers - 1:  # Last layer doesn't have a non-linearity.
-                layer = non_linearity(layer)
+        if dropout_prob is not None and dropout_prob[i] > 0:
+            layer = dropout(layer, 1.0 - dropout_prob[i])
 
-            if dropout_prob is not None and dropout_prob[i] > 0:
-                layer = dropout(layer, 1.0 - dropout_prob[i])
+        if upsample_sizes is not None and upsample_sizes[i] is not None:
+            layer = tf.tile(layer, multiples=[1, upsample_sizes[i], 1])
 
-            if upsample_sizes is not None and upsample_sizes[i] is not None:
-                layer = tf.tile(layer, multiples=[1, upsample_sizes[i], 1])
+        if verbose:
+            print layer
+            print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
 
-            if verbose:
-                print layer
-                print 'output size:', np.prod(layer.get_shape().as_list()[1:]), '\n'
-
-        return layer
+    return layer

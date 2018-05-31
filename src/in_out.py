@@ -110,7 +110,8 @@ def load_txt(file_name, with_faces=False, with_color=False):
         with open(file_name, 'r') as f:
             lines = f.readlines()
 
-    if len(lines) < 2048:
+    if len(lines) < n_points:
+        print(len(lines))
         return None
     else:
         points = np.array([list(map(float, line.split()[:3])) for line in lines])
@@ -126,22 +127,34 @@ def pc_loader(f_name):
     ''' loads a point-cloud saved under ShapeNet's "standar" folder scheme: 
     i.e. /syn_id/model_name.ply
     '''
-    tokens = f_name.split('.')[1].split('/')
-    model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
-    synet_id = tokens[5].split('_')[0]
+    try:
+        tokens = f_name.split('.')[1].split('/')
+        model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
+        synet_id = tokens[5].split('_')[0]
 
-    return load_txt(f_name), model_id, synet_id
+        return load_txt(f_name), model_id, synet_id
+    except:
+        print('error in pc_loader while proccesing', f_name)
+        tokens = f_name.split('.')[1].split('/')
+        model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
+        synet_id = tokens[5].split('_')[0]
+        return None, model_id, synet_id
 
 
 def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_ending='.ply', verbose=False):
-    if class_name == 'all':
+    if 'all' in class_name:
         class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
         file_names = []
         for name in class_names:
             file_names += glob.glob(top_dir.format(name))
+
+        if class_name == 'all_w_clutter':
+            file_names += glob.glob(top_dir.format('clutter'))
     else:
         file_names = glob.glob(top_dir.format(class_name))
+
     print('Loading {} data'.format(len(file_names)))
+
     pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
     return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
 

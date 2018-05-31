@@ -19,7 +19,7 @@ model_saver_id = 'models.ckpt'
 
 
 class Configuration():
-    def __init__(self, n_input, encoder, decoder, encoder_args={}, decoder_args={},
+    def __init__(self, n_input, encoder, decoder, embedder, encoder_args={}, decoder_args={}, embedder_args={},
                  training_epochs=200, batch_size=10, learning_rate=0.001, denoising=False,
                  saver_step=None, train_dir=None, z_rotate=False, loss='chamfer', gauss_augment=None,
                  saver_max_to_keep=None, loss_display_step=1, debug=False,
@@ -31,8 +31,10 @@ class Configuration():
         self.loss = loss.lower()
         self.decoder = decoder
         self.encoder = encoder
+        self.embedder = embedder
         self.encoder_args = encoder_args
         self.decoder_args = decoder_args
+        self.embedder_args = embedder_args
 
         # Training related parameters
         self.batch_size = batch_size
@@ -95,10 +97,12 @@ class AutoEncoder(Neural_Net):
         self.n_output = configuration.n_output
 
         in_shape = [None] + self.n_input
+        v_in_shape = [None] + [int(self.n_input[0]/2), self.n_input[1]]
         out_shape = [None] + self.n_output
 
         with tf.variable_scope(name):
             self.x = tf.placeholder(tf.float32, in_shape)
+            self.vx = tf.placeholder(tf.float32, v_in_shape)
             if self.is_denoising:
                 self.gt = tf.placeholder(tf.float32, out_shape)
             else:
@@ -184,6 +188,10 @@ class AutoEncoder(Neural_Net):
             create_dir(c.train_dir)
 
         for _ in xrange(c.training_epochs):
+            loss, duration = self._single_epoch_train(train_data, c)
+            epoch = int(self.sess.run(self.epoch.assign_add(tf.constant(1.0))))
+            stats.append((epoch, loss, duration))
+
             if epoch == int(c.training_epochs/3):
                 print('==============\nSecond Training Stage\n==============')
                 self.opt = self.train_step2
@@ -194,10 +202,6 @@ class AutoEncoder(Neural_Net):
                 self.opt = self.train_step3
                 self.loss = self.total_loss
                 self.lr *= 0.1
-
-            loss, duration = self._single_epoch_train(train_data, c)
-            epoch = int(self.sess.run(self.epoch.assign_add(tf.constant(1.0))))
-            stats.append((epoch, loss, duration))
 
             if epoch % c.loss_display_step == 0:
                 print("Epoch:", '%04d' % (epoch), 'training time (minutes)=', "{:.4f}".format(duration / 60.0), "loss=", "{:.9f}".format(loss))

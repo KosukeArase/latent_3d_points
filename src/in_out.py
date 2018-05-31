@@ -105,7 +105,7 @@ def get_visible_points(points, n_points):
     ymean = np.mean(points[:, 1])
     points = points[points[:, 1] > ymean]
     points = points[np.random.choice(points.shape[0], n_points)] # allow duplicate
-    return
+    return points
 
 
 def load_txt(file_name, with_faces=False, with_color=False):
@@ -119,11 +119,10 @@ def load_txt(file_name, with_faces=False, with_color=False):
 
     if len(lines) < n_points:
         print(len(lines))
-        return None
+        return None, None
     else:
         points = np.array([list(map(float, line.split()[:3])) for line in lines])
         points = points[np.random.choice(points.shape[0], n_points, replace = False)]
-
         visible_points = get_visible_points(points.copy(), int(n_points/2))
 
         mean = np.mean(points, axis=0)
@@ -131,7 +130,7 @@ def load_txt(file_name, with_faces=False, with_color=False):
         points = (points - mean) / std
 
         vmean = np.mean(visible_points, axis=0)
-        vtd = np.std(visible_points, axis=0)
+        vstd = np.std(visible_points, axis=0)
         visible_points = (visible_points - vmean) / vstd
 
         return points, visible_points

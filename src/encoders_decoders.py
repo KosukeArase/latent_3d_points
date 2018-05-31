@@ -25,7 +25,7 @@ def embedder_with_convs_and_symmetry(in_signal, n_filters=[64, 128, 256, 1024], 
     '''
 
     if verbose:
-        print 'Building Enbedder'
+        print 'Building Embedder'
 
     n_layers = len(n_filters)
     filter_sizes = replicate_parameter_for_all_layers(filter_sizes, n_layers)

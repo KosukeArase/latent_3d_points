@@ -37,7 +37,6 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, bneck_post_mlp=False):
                     'filter_sizes': [1],
                     'strides': [1],
                     'b_norm': True,
-                    'reuse': True,
                     'verbose': True
                     }
 

@@ -1,6 +1,6 @@
 import os.path as osp
 
-from src.ae_templates import mlp_architecture_ala_iclr_18, default_train_params
+from src.ae_templates import mlp_architecture_tl_net, default_train_params
 from src.autoencoder import Configuration as Conf
 from src.point_net_ae import PointNetAutoEncoder
 
@@ -12,8 +12,7 @@ from src.tf_utils import reset_tf_graph
 
 def get_conf(class_name):
     top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
-
-    experiment_name = '{}_ae'.format(class_name)
+    experiment_name = '{}_tl'.format(class_name)
     n_pc_points = 2048                # Number of points per model.
     bneck_size = 128                  # Bottleneck-AE size
     ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
@@ -22,9 +21,6 @@ def get_conf(class_name):
 
     encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size)
     train_dir = create_dir(osp.join(top_out_dir, experiment_name))
-
-    print(enc_args)
-    print(dec_args)
 
     conf = Conf(n_input = [n_pc_points, 3],
             loss = ae_loss,

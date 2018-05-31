@@ -24,12 +24,14 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, bneck_post_mlp=False):
                     'filter_sizes': [1],
                     'strides': [1],
                     'b_norm': True,
+                    'scope': 'encoder',
                     'verbose': True
                     }
 
     decoder_args = {'layer_sizes': [256, 256, np.prod(n_input)],
                     'b_norm': False,
                     'b_norm_finish': False,
+                    'scope': 'decoder',
                     'verbose': True
                     }
 
@@ -37,6 +39,7 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, bneck_post_mlp=False):
                     'filter_sizes': [1],
                     'strides': [1],
                     'b_norm': True,
+                    'scope': 'embedder',
                     'verbose': True
                     }
 

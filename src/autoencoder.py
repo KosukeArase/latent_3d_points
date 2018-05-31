@@ -126,9 +126,9 @@ class AutoEncoder(Neural_Net):
         is_training(True, session=self.sess)
         try:
             if GT is not None:
-                _, loss, recon = self.sess.run((self.train_step, self.loss, self.x_reconstr), feed_dict={self.x: X, self.gt: GT})
+                _, loss, recon = self.sess.run((self.opt, self.loss, self.x_reconstr), feed_dict={self.x: X[0], self.vx: X[1], self.gt: GT})
             else:
-                _, loss, recon = self.sess.run((self.train_step, self.loss, self.x_reconstr), feed_dict={self.x: X})
+                _, loss, recon = self.sess.run((self.opt, self.loss, self.x_reconstr), feed_dict={self.x: X[0], self.vx: X[1]})
 
             is_training(False, session=self.sess)
         except Exception:
@@ -146,26 +146,26 @@ class AutoEncoder(Neural_Net):
             loss = tf.no_op()
 
         if GT is None:
-            return self.sess.run((self.x_reconstr, loss), feed_dict={self.x: X})
+            return self.sess.run((self.x_reconstr, self.vx_reconstr, loss), feed_dict={self.x: X[0], self.vx: X[1]})
         else:
-            return self.sess.run((self.x_reconstr, loss), feed_dict={self.x: X, self.gt: GT})
+            return self.sess.run((self.x_reconstr, self.vx_reconstr, loss), feed_dict={self.x: X[0], self.vx: X[1], self.gt: GT})
 
-    def transform(self, X):
-        '''Transform data by mapping it into the latent space.'''
-        return self.sess.run(self.z, feed_dict={self.x: X})
+    # def transform(self, X):
+    #     '''Transform data by mapping it into the latent space.'''
+    #     return self.sess.run(self.z, feed_dict={self.x: X})
 
-    def interpolate(self, x, y, steps):
-        ''' Interpolate between and x and y input vectors in latent space.
-        x, y np.arrays of size (n_points, dim_embedding).
-        '''
-        in_feed = np.vstack((x, y))
-        z1, z2 = self.transform(in_feed.reshape([2] + self.n_input))
-        all_z = np.zeros((steps + 2, len(z1)))
+    # def interpolate(self, x, y, steps):
+    #     ''' Interpolate between and x and y input vectors in latent space.
+    #     x, y np.arrays of size (n_points, dim_embedding).
+    #     '''
+    #     in_feed = np.vstack((x, y))
+    #     z1, z2 = self.transform(in_feed.reshape([2] + self.n_input))
+    #     all_z = np.zeros((steps + 2, len(z1)))
 
-        for i, alpha in enumerate(np.linspace(0, 1, steps + 2)):
-            all_z[i, :] = (alpha * z2) + ((1.0 - alpha) * z1)
+    #     for i, alpha in enumerate(np.linspace(0, 1, steps + 2)):
+    #         all_z[i, :] = (alpha * z2) + ((1.0 - alpha) * z1)
 
-        return self.sess.run((self.x_reconstr), {self.z: all_z})
+    #     return self.sess.run((self.x_reconstr), {self.z: all_z})
 
     def decode(self, z):
         if np.ndim(z) == 1:  # single example
@@ -176,10 +176,25 @@ class AutoEncoder(Neural_Net):
         c = configuration
         stats = []
 
+        self.opt = self.train_step1
+        self.loss = self.x_loss
+        print('==============\nFirst Training Stage\n==============')
+
         if c.saver_step is not None:
             create_dir(c.train_dir)
 
         for _ in xrange(c.training_epochs):
+            if epoch == int(c.training_epochs/3):
+                print('==============\nSecond Training Stage\n==============')
+                self.opt = self.train_step2
+                self.loss = self.vz_loss
+
+            elif epoch == int(c.training_epochs/3*2):
+                print('==============\nThird Training Stage\n==============')
+                self.opt = self.train_step3
+                self.loss = self.total_loss
+                self.lr *= 0.1
+
             loss, duration = self._single_epoch_train(train_data, c)
             epoch = int(self.sess.run(self.epoch.assign_add(tf.constant(1.0))))
             stats.append((epoch, loss, duration))
@@ -267,35 +282,35 @@ class AutoEncoder(Neural_Net):
 
         return reconstructions, losses, np.squeeze(feed_data), ids, np.squeeze(original_data)
 
-    def embedding_at_tensor(self, dataset, conf, feed_original=True, apply_augmentation=False, tensor_name='bottleneck'):
-        '''
-        Observation: the NN-neighborhoods seem more reasonable when we do not apply the augmentation.
-        Observation: the next layer after latent (z) might be something interesting.
-        tensor_name: e.g. model.name + '_1/decoder_fc_0/BiasAdd:0'
-        '''
-        batch_size = conf.batch_size
-        original, ids, noise = dataset.full_epoch_data(shuffle=False)
+    # def embedding_at_tensor(self, dataset, conf, feed_original=True, apply_augmentation=False, tensor_name='bottleneck'):
+    #     '''
+    #     Observation: the NN-neighborhoods seem more reasonable when we do not apply the augmentation.
+    #     Observation: the next layer after latent (z) might be something interesting.
+    #     tensor_name: e.g. model.name + '_1/decoder_fc_0/BiasAdd:0'
+    #     '''
+    #     batch_size = conf.batch_size
+    #     original, ids, noise = dataset.full_epoch_data(shuffle=False)
 
-        if feed_original:
-            feed = original
-        else:
-            feed = noise
-            if feed is None:
-                feed = original
+    #     if feed_original:
+    #         feed = original
+    #     else:
+    #         feed = noise
+    #         if feed is None:
+    #             feed = original
 
-        feed_data = feed
-        if apply_augmentation:
-            feed_data = apply_augmentations(feed, conf)
+    #     feed_data = feed
+    #     if apply_augmentation:
+    #         feed_data = apply_augmentations(feed, conf)
 
-        embedding = []
-        if tensor_name == 'bottleneck':
-            for b in iterate_in_chunks(feed_data, batch_size):
-                embedding.append(self.transform(b.reshape([len(b)] + conf.n_input)))
-        else:
-            embedding_tensor = self.graph.get_tensor_by_name(tensor_name)
-            for b in iterate_in_chunks(feed_data, batch_size):
-                codes = self.sess.run(embedding_tensor, feed_dict={self.x: b.reshape([len(b)] + conf.n_input)})
-                embedding.append(codes)
+    #     embedding = []
+    #     if tensor_name == 'bottleneck':
+    #         for b in iterate_in_chunks(feed_data, batch_size):
+    #             embedding.append(self.transform(b.reshape([len(b)] + conf.n_input)))
+    #     else:
+    #         embedding_tensor = self.graph.get_tensor_by_name(tensor_name)
+    #         for b in iterate_in_chunks(feed_data, batch_size):
+    #             codes = self.sess.run(embedding_tensor, feed_dict={self.x: b.reshape([len(b)] + conf.n_input)})
+    #             embedding.append(codes)
 
-        embedding = np.vstack(embedding)
-        return feed, embedding, ids
+    #     embedding = np.vstack(embedding)
+    #     return feed, embedding, ids

@@ -35,13 +35,19 @@ class PointNetAutoEncoder(AutoEncoder):
 
         with tf.variable_scope(name):
             self.z = c.encoder(self.x, **c.encoder_args)
+            self.vz = c.embedder(self.vx, **c.embedder_args)
+
             self.bottleneck_size = int(self.z.get_shape()[1])
             layer = c.decoder(self.z, **c.decoder_args)
+            vlayer = c.decoder(self.vz, **c.decoder_args)
             
             if c.exists_and_is_not_none('close_with_tanh'):
                 layer = tf.nn.tanh(layer)
+                vlayer = tf.nn.tanh(vlayer)
+
 
             self.x_reconstr = tf.reshape(layer, [-1, self.n_output[0], self.n_output[1]])
+            self.vx_reconstr = tf.reshape(vlayer, [-1, self.n_output[0], self.n_output[1]])
             
             self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=c.saver_max_to_keep)
 
@@ -69,14 +75,26 @@ class PointNetAutoEncoder(AutoEncoder):
             self.sess.run(self.init)
 
     def _create_loss(self):
+        lambda_x = 0.2
+        lambda_z = 1
         c = self.configuration
 
         if c.loss == 'chamfer':
             cost_p1_p2, _, cost_p2_p1, _ = nn_distance(self.x_reconstr, self.gt)
-            self.loss = tf.reduce_mean(cost_p1_p2) + tf.reduce_mean(cost_p2_p1)
+            self.x_loss = tf.reduce_mean(cost_p1_p2) + tf.reduce_mean(cost_p2_p1)
         elif c.loss == 'emd':
             match = approx_match(self.x_reconstr, self.gt)
-            self.loss = tf.reduce_mean(match_cost(self.x_reconstr, self.gt, match))
+            self.x_loss = tf.reduce_mean(match_cost(self.x_reconstr, self.gt, match))
+
+        z_stopped = tf.stop_gradient(self.z)
+        self.vz_loss = tf.nn.l2_loss(self.vz - z_stopped)
+        self.z_total_loss = tf.nn.l2_loss(self.vz - self.z)
+
+        self.x_loss *= (lambda_x/c.batch_size)
+        self.vz_loss *= (lambda_z/c.batch_size)
+        self.z_total_loss *= (lambda_z/c.batch_size)
+        self.total_loss = self.x_loss + self.z_total_loss
+
 
         reg_losses = self.graph.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         if c.exists_and_is_not_none('w_reg_alpha'):
@@ -85,7 +103,9 @@ class PointNetAutoEncoder(AutoEncoder):
             w_reg_alpha = 1.0
 
         for rl in reg_losses:
-            self.loss += (w_reg_alpha * rl)
+            self.x_loss += (w_reg_alpha * rl)
+            self.vz_loss += (w_reg_alpha * rl)
+            self.total_loss += (w_reg_alpha * rl)
 
     def _setup_optimizer(self):
         c = self.configuration
@@ -96,7 +116,9 @@ class PointNetAutoEncoder(AutoEncoder):
             tf.summary.scalar('learning_rate', self.lr)
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
-        self.train_step = self.optimizer.minimize(self.loss)
+        self.train_step1 = self.optimizer.minimize(self.x_loss)
+        self.train_step2 = self.optimizer.minimize(self.vz_loss)
+        self.train_step3 = self.optimizer.minimize(self.total_loss)
 
     def _single_epoch_train(self, train_data, configuration, only_fw=False):
         n_examples = train_data.num_examples
@@ -114,13 +136,16 @@ class PointNetAutoEncoder(AutoEncoder):
         for _ in xrange(n_batches):
 
             if self.is_denoising:
-                original_data, _, batch_i = train_data.next_batch(batch_size)
+                original_data, visible_data, _, batch_i = train_data.next_batch(batch_size)
                 if batch_i is None:  # In this case the denoising concern only the augmentation.
-                    batch_i = original_data
+                    batch_i = [original_data, visible_data]
             else:
-                batch_i, _, _ = train_data.next_batch(batch_size)
+                original_data, visible_data, _, _ = train_data.next_batch(batch_size)
+                batch_i = [original_data, visible_data]
 
-            batch_i = apply_augmentations(batch_i, configuration)   # This is a new copy of the batch.
+
+            batch_i[0] = apply_augmentations(batch_i[0], configuration)   # This is a new copy of the batch.
+            batch_i[1] = apply_augmentations(batch_i[1], configuration)   # This is a new copy of the batch.
 
             if self.is_denoising:
                 _, loss = fit(batch_i, original_data)
@@ -137,7 +162,7 @@ class PointNetAutoEncoder(AutoEncoder):
         
         return epoch_loss, duration
 
-    def gradient_of_input_wrt_loss(self, in_points, gt_points=None):
-        if gt_points is None:
-            gt_points = in_points
-        return self.sess.run(tf.gradients(self.loss, self.x), feed_dict={self.x: in_points, self.gt: gt_points})
+    # def gradient_of_input_wrt_loss(self, in_points, gt_points=None):
+    #     if gt_points is None:
+    #         gt_points = in_points
+    #     return self.sess.run(tf.gradients(self.loss, self.x), feed_dict={self.x: in_points, self.gt: gt_points})

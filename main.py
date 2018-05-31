@@ -20,7 +20,7 @@ def get_conf(class_name):
 
     train_params = default_train_params()
 
-    encoder, decoder, enc_args, dec_args = mlp_architecture_ala_iclr_18(n_pc_points, bneck_size)
+    encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size)
     train_dir = create_dir(osp.join(top_out_dir, experiment_name))
 
     print(enc_args)
@@ -38,8 +38,10 @@ def get_conf(class_name):
             z_rotate = train_params['z_rotate'],
             encoder = encoder,
             decoder = decoder,
+            embedder = embedder,
             encoder_args = enc_args,
-            decoder_args = dec_args
+            decoder_args = dec_args,
+            embedder_args = emb_args
            )
     conf.experiment_name = experiment_name
     conf.held_out_step = 5   # How often to evaluate/print out loss on 
@@ -69,9 +71,9 @@ def main():
     train_stats = ae.train(all_pc_data, conf, log_file=fout)
     fout.close()
 
-    feed_pc, feed_model_names, _ = all_pc_data.next_batch(10)
-    reconstructions = ae.reconstruct(feed_pc)
-    latent_codes = ae.transform(feed_pc)
+    feed_pc, feed_pc_v, feed_model_names, _ = all_pc_data.next_batch(10)
+    ae_reconstructions, v_reconstructions = ae.reconstruct([feed_pc, feed_pc_v])
+    # latent_codes = ae.transform(feed_pc)
 
 
 

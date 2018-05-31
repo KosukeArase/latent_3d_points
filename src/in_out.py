@@ -133,8 +133,14 @@ def pc_loader(f_name):
     return load_txt(f_name), model_id, synet_id
 
 
-def load_all_point_clouds_under_folder(top_dir, n_threads=20, file_ending='.ply', verbose=False):
-    file_names = glob.glob(top_dir) # [f for f in files_in_subdirs(top_dir, file_ending)]
+def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_ending='.ply', verbose=False):
+    if class_name == 'all':
+        class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
+        file_names = []
+        for name in class_names:
+            file_names += glob.glob(top_dir.format(name))
+    else:
+        file_names = glob.glob(top_dir.format(class_name))
     print('Loading {} data'.format(len(file_names)))
     pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
     return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)

@@ -49,15 +49,17 @@ def get_conf(class_name):
     return conf
 
 
-
 def main():
-    class_name = raw_input('Give me the class name (e.g. "chair"): ').lower()
-    conf = get_conf(class_name)
-    train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
-    # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
-    test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'.format(class_name) # Top-dir of where point-clouds are stored.
+    class_name = 'chair' #raw_input('Give me the class name (e.g. "chair"): ').lower()
+    class_name = raw_input('Give me the class name (e.g. "chair" or "all"): ').lower()
 
-    all_pc_data = load_all_point_clouds_under_folder(train_dir, n_threads=1, file_ending='.ply', verbose=True)
+    conf = get_conf(class_name)
+
+    train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'
+    train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
+    test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
+
+    all_pc_data = load_all_point_clouds_under_folder(train_dir, class_name, n_threads=20, file_ending='.ply', verbose=True)
 
     reset_tf_graph()
     ae = PointNetAutoEncoder(conf.experiment_name, conf)

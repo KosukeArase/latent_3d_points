@@ -221,6 +221,9 @@ class AutoEncoder(Neural_Net):
                 print('==============\nThird Training Stage\n==============')
                 self.opt = self.train_step3
                 self.loss = self.total_loss
+
+            elif epoch == int(c.training_epochs/4*3):
+                print('==============\nFourth Training Stage\n==============')
                 self.lr *= 0.1
 
         return stats

@@ -92,9 +92,9 @@ class PointNetAutoEncoder(AutoEncoder):
         self.vz_loss = tf.nn.l2_loss(self.vz - z_stopped)
         self.z_total_loss = tf.nn.l2_loss(self.vz - self.z)
 
-        self.x_loss *= (lambda_x/c.batch_size)
-        self.vz_loss *= (lambda_z/c.batch_size)
-        self.z_total_loss *= (lambda_z/c.batch_size)
+        self.x_loss *= lambda_x
+        self.vz_loss *= lambda_z
+        self.z_total_loss *= lambda_z
         self.total_loss = self.x_loss + self.z_total_loss
 
 

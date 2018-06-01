@@ -68,7 +68,7 @@ def main():
     fout.close()
 
     feed_pc, feed_pc_v, feed_model_names, _ = all_pc_data.next_batch(10)
-    ae_reconstructions, v_reconstructions = ae.reconstruct([feed_pc, feed_pc_v])
+    ae_reconstructions, v_reconstructions, _ = ae.reconstruct([feed_pc, feed_pc_v])
     # latent_codes = ae.transform(feed_pc)
 
 

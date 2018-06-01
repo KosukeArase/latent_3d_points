@@ -192,17 +192,6 @@ class AutoEncoder(Neural_Net):
             epoch = int(self.sess.run(self.epoch.assign_add(tf.constant(1.0))))
             stats.append((epoch, loss, duration))
 
-            if epoch == int(c.training_epochs/3):
-                print('==============\nSecond Training Stage\n==============')
-                self.opt = self.train_step2
-                self.loss = self.vz_loss
-
-            elif epoch == int(c.training_epochs/3*2):
-                print('==============\nThird Training Stage\n==============')
-                self.opt = self.train_step3
-                self.loss = self.total_loss
-                self.lr *= 0.1
-
             if epoch % c.loss_display_step == 0:
                 print("Epoch:", '%04d' % (epoch), 'training time (minutes)=', "{:.4f}".format(duration / 60.0), "loss=", "{:.9f}".format(loss))
                 if log_file is not None:
@@ -222,6 +211,18 @@ class AutoEncoder(Neural_Net):
                 print("Held Out Data :", 'forward time (minutes)=', "{:.4f}".format(duration / 60.0), "loss=", "{:.9f}".format(loss))
                 if log_file is not None:
                     log_file.write('On Held_Out: %04d\t%.9f\t%.4f\n' % (epoch, loss, duration / 60.0))
+
+            if epoch == int(c.training_epochs/4):
+                print('==============\nSecond Training Stage\n==============')
+                self.opt = self.train_step2
+                self.loss = self.vz_loss
+
+            elif epoch == int(c.training_epochs/2):
+                print('==============\nThird Training Stage\n==============')
+                self.opt = self.train_step3
+                self.loss = self.total_loss
+                self.lr *= 0.1
+
         return stats
 
     def evaluate(self, in_data, configuration, ret_pre_augmentation=False):

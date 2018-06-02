@@ -58,7 +58,7 @@ def main():
     buf_size = 1 # Make 'training_stats' file to flush each output line regarding training.
     fout = open(osp.join(conf.train_dir, 'train_stats.txt'), 'a', buf_size)
 
-    all_pc_data = load_all_point_clouds_under_folder(train_dir, params['class_name'], n_threads=20, n_points=conf.n_input[0], with_color=conf.input_color, verbose=True)
+    all_pc_data = load_all_point_clouds_under_folder(train_dir, params['class_name'], n_points=conf.n_input[0], with_color=conf.input_color, n_threads=20, verbose=True)
     train_stats = ae.train(all_pc_data, conf, log_file=fout)
     fout.close()
 

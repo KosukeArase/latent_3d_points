@@ -85,7 +85,8 @@ class Configuration():
 def get_conf(train_params):
     class_name = train_params['class_name']
     top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
-    experiment_name = '/'.join([train_params['experiment_name'], class_name])
+    experiment_name = '_'.join([class_name, train_params['experiment_name']])
+    ckpt_path = '/'.join([train_params['experiment_name'], class_name])
     n_pc_points = train_params['n_pc_points']
     bneck_size = 128                  # Bottleneck-AE size
     ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
@@ -94,7 +95,7 @@ def get_conf(train_params):
     n_output_feat = 6 if train_params['output_color'] else 3
 
     encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=n_output_feat)
-    train_dir = create_dir(osp.join(top_out_dir, experiment_name))
+    train_dir = create_dir(osp.join(top_out_dir, ckpt_path))
 
     conf = Configuration(n_input = [n_pc_points, n_input_feat],
             n_output = [n_pc_points, n_output_feat],
@@ -181,7 +182,7 @@ def add_gaussian_noise_to_pcloud(pcloud, mu=0, sigma=1):
     return pcloud
 
 
-def get_visible_points(points):
+def get_visible_points(points, org=False):
     n_points = int(len(points)/2)
     ymean = np.mean(points[:, 1])
     points = points[points[:, 1] > ymean]
@@ -190,9 +191,12 @@ def get_visible_points(points):
 
     mean = np.mean(points, axis=0)
     std = np.std(points, axis=0)
-    points = (points - mean) / std
+    norm_points = (points - mean) / std
 
-    return points
+    if org:
+        return norm_points, points
+    else:
+        return norm_points
 
 
 def apply_augmentations(batch, conf):

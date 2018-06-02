@@ -95,7 +95,7 @@ def apply_augmentations(batch, conf):
         r_rotation[1, 2] = 0
         r_rotation[2, 1] = 0
         r_rotation[2, 2] = 1
-        batch = batch.dot(r_rotation)
+        batch[:, :, :3] = batch[:, :, :3].dot(r_rotation)
 
     batch_viz = np.array([get_visible_points(x) for x in batch])
     return batch, batch_viz

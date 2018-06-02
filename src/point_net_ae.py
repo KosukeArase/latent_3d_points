@@ -89,7 +89,7 @@ class PointNetAutoEncoder(AutoEncoder):
             self.x_loss = tf.reduce_mean(cost_p1_p2) + tf.reduce_mean(cost_p2_p1)
         elif c.loss == 'emd':
             match = approx_match(self.x_reconstr[:, :, :n_output_feat], self.gt[:, :, :n_output_feat])
-            self.x_loss = tf.reduce_mean(match_cost(self.x_reconstr, self.gt, match))
+            self.x_loss = tf.reduce_mean(match_cost(self.x_reconstr[:, :, :n_output_feat], self.gt[:, :, :n_output_feat], match))
 
         z_stopped = tf.stop_gradient(self.z)
         self.vz_loss = tf.nn.l2_loss(self.vz - z_stopped)

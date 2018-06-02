@@ -55,7 +55,7 @@ def load_txt(file_name, with_faces=False, with_color=False):
     n_points = 2048
     n_features = 6 if with_color else 3
 
-    if with_faces or with_color:
+    if with_faces:
         raise NotImplementedError
     else:
         with open(file_name, 'r') as f:
@@ -86,8 +86,8 @@ def pc_loader(f_name, with_color=False):
         points = load_txt(f_name, with_color=with_color)
 
         return points, model_id, synet_id
-    except:
-        print('error in pc_loader while proccesing', f_name)
+    except Exception as e:
+        print('error in pc_loader while proccesing', f_name, e)
         tokens = f_name.split('.')[1].split('/')
         model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
         synet_id = tokens[5].split('_')[0]

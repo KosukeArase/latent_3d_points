@@ -4,8 +4,7 @@ from src.ae_templates import mlp_architecture_tl_net, default_train_params
 from src.autoencoder import Configuration as Conf
 from src.point_net_ae import PointNetAutoEncoder
 
-from src.in_out import snc_category_to_synth_id, create_dir, PointCloudDataSet, \
-                                        load_all_point_clouds_under_folder
+from src.in_out import create_dir, PointCloudDataSet, load_all_point_clouds_under_folder
 
 from src.tf_utils import reset_tf_graph
 
@@ -69,7 +68,7 @@ def main():
     buf_size = 1 # Make 'training_stats' file to flush each output line regarding training.
     fout = open(osp.join(conf.train_dir, 'train_stats.txt'), 'a', buf_size)
 
-    all_pc_data = load_all_point_clouds_under_folder(train_dir, class_name, n_threads=20, file_ending='.ply', verbose=True)
+    all_pc_data = load_all_point_clouds_under_folder(train_dir, class_name, with_color=conf.input_color, n_threads=20, verbose=True)
     train_stats = ae.train(all_pc_data, conf, log_file=fout)
     fout.close()
 

@@ -36,7 +36,7 @@ class Configuration():
         self.loss_display_step = loss_display_step
         self.saver_step = saver_step
         self.train_dir = train_dir
-        self.gauss_augment = gauss_augment
+        self.gauss_augment = {'mu': 0., 'sigma': 0.1} if gauss_augment else None
         self.z_rotate = z_rotate
         self.input_color = input_color
         self.output_color = output_color
@@ -103,6 +103,7 @@ def get_conf(train_params):
             training_epochs = train_params['training_epochs'],
             batch_size = train_params['batch_size'],
             denoising = train_params['denoising'],
+            gauss_augment = train_params['gauss_augment'],
             learning_rate = train_params['learning_rate'],
             train_dir = train_dir,
             loss_display_step = train_params['loss_display_step'],

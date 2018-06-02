@@ -46,13 +46,3 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=3, bneck_post
         decoder_args['layer_sizes'][0] = bneck_size
 
     return encoder, decoder, embedder, encoder_args, decoder_args, embedder_args
-
-
-def default_train_params(single_class=True):
-
-
-    if not single_class:
-        params['z_rotate'] = True
-        params['training_epochs'] = 1000
-
-    return params

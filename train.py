@@ -62,10 +62,6 @@ def main():
     train_stats = ae.train(all_pc_data, conf, log_file=fout)
     fout.close()
 
-    feed_pc, feed_pc_v, feed_model_names, _ = all_pc_data.next_batch(10)
-    ae_reconstructions, v_reconstructions, _ = ae.reconstruct([feed_pc, feed_pc_v])
-    # latent_codes = ae.transform(feed_pc)
-
 
 if __name__ == '__main__':
     main()

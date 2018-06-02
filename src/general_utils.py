@@ -82,7 +82,8 @@ class Configuration():
         return unpickle_data(file_name + '.pickle').next()
 
 
-def get_conf(class_name, train_params):
+def get_conf(train_params):
+    class_name = train_params['class_name']
     top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
     experiment_name = '/'.join([train_params['experiment_name'], class_name])
     n_pc_points = train_params['n_pc_points']

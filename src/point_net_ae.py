@@ -81,11 +81,14 @@ class PointNetAutoEncoder(AutoEncoder):
         lambda_z = 1
         c = self.configuration
 
+        n_output_feat = c.n_output[1]
+        assert n_output_feat in [3, 6]
+
         if c.loss == 'chamfer':
-            cost_p1_p2, _, cost_p2_p1, _ = nn_distance(self.x_reconstr, self.gt)
+            cost_p1_p2, _, cost_p2_p1, _ = nn_distance(self.x_reconstr[:, :, :n_output_feat], self.gt[:, :, :n_output_feat])
             self.x_loss = tf.reduce_mean(cost_p1_p2) + tf.reduce_mean(cost_p2_p1)
         elif c.loss == 'emd':
-            match = approx_match(self.x_reconstr, self.gt)
+            match = approx_match(self.x_reconstr[:, :, :n_output_feat], self.gt[:, :, :n_output_feat])
             self.x_loss = tf.reduce_mean(match_cost(self.x_reconstr, self.gt, match))
 
         z_stopped = tf.stop_gradient(self.z)

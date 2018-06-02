@@ -19,10 +19,14 @@ def get_conf(class_name):
 
     train_params = default_train_params()
 
-    encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size)
+    n_input_feat = 6 if train_params['input_color'] else 3
+    n_output_feat = 6 if train_params['output_color'] else 3
+
+    encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=n_output_feat)
     train_dir = create_dir(osp.join(top_out_dir, experiment_name))
 
-    conf = Conf(n_input = [n_pc_points, 3],
+    conf = Conf(n_input = [n_pc_points, n_input_feat],
+            n_output = [n_pc_points, n_output_feat],
             loss = ae_loss,
             training_epochs = train_params['training_epochs'],
             batch_size = train_params['batch_size'],
@@ -32,6 +36,8 @@ def get_conf(class_name):
             loss_display_step = train_params['loss_display_step'],
             saver_step = train_params['saver_step'],
             z_rotate = train_params['z_rotate'],
+            input_color = train_params['input_color'],
+            output_color = train_params['output_color'],
             encoder = encoder,
             decoder = decoder,
             embedder = embedder,

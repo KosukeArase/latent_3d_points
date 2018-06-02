@@ -5,39 +5,12 @@ import os
 import os.path as osp
 import re
 import glob
+import functools
 from six.moves import cPickle
 from multiprocessing import Pool
 
 from general_utils import rand_rotation_matrix
 from external.python_plyfile.plyfile import PlyElement, PlyData
-
-snc_synth_id_to_category = {
-    '02691156': 'airplane',  '02773838': 'bag',        '02801938': 'basket',
-    '02808440': 'bathtub',   '02818832': 'bed',        '02828884': 'bench',
-    '02834778': 'bicycle',   '02843684': 'birdhouse',  '02871439': 'bookshelf',
-    '02876657': 'bottle',    '02880940': 'bowl',       '02924116': 'bus',
-    '02933112': 'cabinet',   '02747177': 'can',        '02942699': 'camera',
-    '02954340': 'cap',       '02958343': 'car',        '03001627': 'chair',
-    '03046257': 'clock',     '03207941': 'dishwasher', '03211117': 'monitor',
-    '04379243': 'table',     '04401088': 'telephone',  '02946921': 'tin_can',
-    '04460130': 'tower',     '04468005': 'train',      '03085013': 'keyboard',
-    '03261776': 'earphone',  '03325088': 'faucet',     '03337140': 'file',
-    '03467517': 'guitar',    '03513137': 'helmet',     '03593526': 'jar',
-    '03624134': 'knife',     '03636649': 'lamp',       '03642806': 'laptop',
-    '03691459': 'speaker',   '03710193': 'mailbox',    '03759954': 'microphone',
-    '03761084': 'microwave', '03790512': 'motorcycle', '03797390': 'mug',
-    '03928116': 'piano',     '03938244': 'pillow',     '03948459': 'pistol',
-    '03991062': 'pot',       '04004475': 'printer',    '04074963': 'remote_control',
-    '04090263': 'rifle',     '04099429': 'rocket',     '04225987': 'skateboard',
-    '04256520': 'sofa',      '04330267': 'stove',      '04530566': 'vessel',
-    '04554684': 'washer',    '02858304': 'boat',       '02992529': 'cellphone'
-}
-
-
-def snc_category_to_synth_id():
-    d = snc_synth_id_to_category
-    inv_map = {v: k for k, v in six.iteritems(d)}
-    return inv_map
 
 
 def create_dir(dir_path):
@@ -78,31 +51,9 @@ def files_in_subdirs(top_dir, search_pattern):
                 yield full_name
 
 
-def load_ply(file_name, with_faces=False, with_color=False):
-    ply_data = PlyData.read(file_name)
-    points = ply_data['vertex']
-    points = np.vstack([points['x'], points['y'], points['z']]).T
-    ret_val = [points]
-
-    if with_faces:
-        faces = np.vstack(ply_data['face']['vertex_indices'])
-        ret_val.append(faces)
-
-    if with_color:
-        r = np.vstack(ply_data['vertex']['red'])
-        g = np.vstack(ply_data['vertex']['green'])
-        b = np.vstack(ply_data['vertex']['blue'])
-        color = np.hstack((r, g, b))
-        ret_val.append(color)
-
-    if len(ret_val) == 1:  # Unwrap the list
-        ret_val = ret_val[0]
-
-    return ret_val
-
-
 def load_txt(file_name, with_faces=False, with_color=False):
     n_points = 2048
+    n_features = 6 if with_color else 3
 
     if with_faces or with_color:
         raise NotImplementedError
@@ -114,7 +65,7 @@ def load_txt(file_name, with_faces=False, with_color=False):
         print(len(lines))
         return None
     else:
-        points = np.array([list(map(float, line.split()[:3])) for line in lines])
+        points = np.array([list(map(float, line.split()[:n_features])) for line in lines])
         points = points[np.random.choice(points.shape[0], n_points, replace = False)]
 
         mean = np.mean(points, axis=0)
@@ -124,7 +75,7 @@ def load_txt(file_name, with_faces=False, with_color=False):
         return points
 
 
-def pc_loader(f_name):
+def pc_loader(f_name, with_color=False):
     ''' loads a point-cloud saved under ShapeNet's "standar" folder scheme: 
     i.e. /syn_id/model_name.ply
     '''
@@ -132,7 +83,7 @@ def pc_loader(f_name):
         tokens = f_name.split('.')[1].split('/')
         model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
         synet_id = tokens[5].split('_')[0]
-        points = load_txt(f_name)
+        points = load_txt(f_name, with_color=with_color)
 
         return points, model_id, synet_id
     except:
@@ -143,7 +94,7 @@ def pc_loader(f_name):
         return None, model_id, synet_id
 
 
-def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_ending='.ply', verbose=False):
+def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, with_color=False, verbose=False):
     if 'all' in class_name:
         class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
         file_names = []
@@ -157,13 +108,13 @@ def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_e
 
     print('Loading {} data'.format(len(file_names)))
 
-    pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
+    pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, with_color=with_color, verbose=verbose)
     return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
 
 
-def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=False):
+def load_point_clouds_from_filenames(file_names, n_threads, loader, with_color=False, verbose=False):
     n_points = 2048
-    n_features = 3 # XYZ
+    n_features = 6 if with_color else 3 # XYZ or XYZRGB
     pclouds = np.empty([len(file_names), n_points, n_features], dtype=np.float32)
 
     model_names = np.empty([len(file_names)], dtype=object)
@@ -171,7 +122,7 @@ def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=Fals
     pool = Pool(n_threads)
     skipped = 0
 
-    for i, data in enumerate(pool.imap(loader, file_names)):
+    for i, data in enumerate(pool.imap(functools.partial(loader, with_color=with_color), file_names)):
         if data[0] is None:
             print(data[1:], "was skipped since it doesn't have enough points")
             skipped += 1

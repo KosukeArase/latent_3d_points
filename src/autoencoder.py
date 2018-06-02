@@ -21,7 +21,7 @@ model_saver_id = 'models.ckpt'
 class Configuration():
     def __init__(self, n_input, encoder, decoder, embedder, encoder_args={}, decoder_args={}, embedder_args={},
                  training_epochs=200, batch_size=10, learning_rate=0.001, denoising=False,
-                 saver_step=None, train_dir=None, z_rotate=False, loss='chamfer', gauss_augment=None,
+                 saver_step=None, train_dir=None, z_rotate=False, input_color=False, output_color=False, loss='chamfer', gauss_augment=None,
                  saver_max_to_keep=None, loss_display_step=1, debug=False,
                  n_z=None, n_output=None, latent_vs_recon=1.0, consistent_io=None):
 
@@ -44,6 +44,8 @@ class Configuration():
         self.train_dir = train_dir
         self.gauss_augment = gauss_augment
         self.z_rotate = z_rotate
+        self.input_color = input_color
+        self.output_color = output_color
         self.saver_max_to_keep = saver_max_to_keep
         self.training_epochs = training_epochs
         self.debug = debug

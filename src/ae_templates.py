@@ -8,7 +8,7 @@ import numpy as np
 from encoders_decoders import encoder_with_convs_and_symmetry, decoder_with_fc_only, embedder_with_convs_and_symmetry
 
 
-def mlp_architecture_tl_net(n_pc_points, bneck_size, bneck_post_mlp=False):
+def mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=3, bneck_post_mlp=False):
     ''' Single class experiments.
     '''
     if n_pc_points != 2048:
@@ -18,7 +18,7 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, bneck_post_mlp=False):
     decoder = decoder_with_fc_only
     embedder = embedder_with_convs_and_symmetry
 
-    n_input = [n_pc_points, 3]
+    n_output = [n_pc_points, n_output_feat]
 
     encoder_args = {'n_filters': [64, 128, 128, 256, bneck_size],
                     'filter_sizes': [1],
@@ -88,6 +88,8 @@ def default_train_params(single_class=True):
               'learning_rate': 0.0005,
               'z_rotate': True,
               'saver_step': 10,
+              'input_color': False,
+              'output_color': False,
               'loss_display_step': 1
               }
 

@@ -138,21 +138,20 @@ class PointNetAutoEncoder(AutoEncoder):
         for _ in xrange(n_batches):
 
             if self.is_denoising:
-                original_data, visible_data, _, batch_i = train_data.next_batch(batch_size)
+                original_data, _, batch_i = train_data.next_batch(batch_size)
                 if batch_i is None:  # In this case the denoising concern only the augmentation.
-                    batch_i = [original_data, visible_data]
+                    batch_i = original_data
             else:
-                original_data, visible_data, _, _ = train_data.next_batch(batch_size)
-                batch_i = [original_data, visible_data]
+                original_data, _, _ = train_data.next_batch(batch_size)
+                batch_i = original_data
 
 
-            batch_i[0] = apply_augmentations(batch_i[0], configuration)   # This is a new copy of the batch.
-            batch_i[1] = apply_augmentations(batch_i[1], configuration)   # This is a new copy of the batch.
+            batch, batch_vis = apply_augmentations(batch_i, configuration) # This is a new copy of the batch.
 
             if self.is_denoising:
-                _, loss = fit(batch_i, original_data)
+                _, loss = fit([batch, batch_vis], original_data)
             else:
-                _, loss = fit(batch_i)
+                _, loss = fit([batch, batch_vis])
 
             # Compute average loss
             epoch_loss += loss

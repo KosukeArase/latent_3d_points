@@ -101,13 +101,6 @@ def load_ply(file_name, with_faces=False, with_color=False):
     return ret_val
 
 
-def get_visible_points(points, n_points):
-    ymean = np.mean(points[:, 1])
-    points = points[points[:, 1] > ymean]
-    points = points[np.random.choice(points.shape[0], n_points)] # allow duplicate
-    return points
-
-
 def load_txt(file_name, with_faces=False, with_color=False):
     n_points = 2048
 
@@ -119,21 +112,16 @@ def load_txt(file_name, with_faces=False, with_color=False):
 
     if len(lines) < n_points:
         print(len(lines))
-        return None, None
+        return None
     else:
         points = np.array([list(map(float, line.split()[:3])) for line in lines])
         points = points[np.random.choice(points.shape[0], n_points, replace = False)]
-        visible_points = get_visible_points(points.copy(), int(n_points/2))
 
         mean = np.mean(points, axis=0)
         std = np.std(points, axis=0)
         points = (points - mean) / std
 
-        vmean = np.mean(visible_points, axis=0)
-        vstd = np.std(visible_points, axis=0)
-        visible_points = (visible_points - vmean) / vstd
-
-        return points, visible_points
+        return points
 
 
 def pc_loader(f_name):
@@ -144,15 +132,15 @@ def pc_loader(f_name):
         tokens = f_name.split('.')[1].split('/')
         model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
         synet_id = tokens[5].split('_')[0]
-        points, visible_points = load_txt(f_name)
+        points = load_txt(f_name)
 
-        return points, visible_points, model_id, synet_id
+        return points, model_id, synet_id
     except:
         print('error in pc_loader while proccesing', f_name)
         tokens = f_name.split('.')[1].split('/')
         model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
         synet_id = tokens[5].split('_')[0]
-        return None, None, model_id, synet_id
+        return None, model_id, synet_id
 
 
 def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_ending='.ply', verbose=False):
@@ -169,15 +157,15 @@ def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, file_e
 
     print('Loading {} data'.format(len(file_names)))
 
-    pclouds, visible_pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
-    return PointCloudDataSet(pclouds, visible_pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
+    pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, verbose=verbose)
+    return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
 
 
 def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=False):
     n_points = 2048
     n_features = 3 # XYZ
     pclouds = np.empty([len(file_names), n_points, n_features], dtype=np.float32)
-    visible_pclouds = np.empty([len(file_names), int(n_points/2), n_features], dtype=np.float32)
+
     model_names = np.empty([len(file_names)], dtype=object)
     class_ids = np.empty([len(file_names)], dtype=object)
     pool = Pool(n_threads)
@@ -189,13 +177,12 @@ def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=Fals
             skipped += 1
             continue
         else:
-            pclouds[i-skipped, :, :], visible_pclouds[i-skipped, :, :], model_names[i-skipped], class_ids[i-skipped] = data
+            pclouds[i-skipped, :, :], model_names[i-skipped], class_ids[i-skipped] = data
 
     pool.close()
     pool.join()
 
     pclouds = pclouds[:len(file_names)-skipped]
-    visible_pclouds = visible_pclouds[:len(file_names)-skipped]
     model_names = model_names[:len(file_names)-skipped]
     class_ids = class_ids[:len(file_names)-skipped]
 
@@ -205,7 +192,7 @@ def load_point_clouds_from_filenames(file_names, n_threads, loader, verbose=Fals
     if verbose:
         print('{0} pclouds were loaded. They belong in {1} shape-classes.'.format(len(pclouds), len(np.unique(class_ids))))
 
-    return pclouds, visible_pclouds, model_names, class_ids
+    return pclouds, model_names, class_ids
 
 
 class PointCloudDataSet(object):
@@ -213,12 +200,12 @@ class PointCloudDataSet(object):
     See https://github.com/tensorflow/tensorflow/blob/a5d8217c4ed90041bea2616c14a8ddcf11ec8c03/tensorflow/examples/tutorials/mnist/input_data.py
     '''
 
-    def __init__(self, point_clouds, visible_point_clouds, noise=None, labels=None, copy=True, init_shuffle=True):
+    def __init__(self, point_clouds, noise=None, labels=None, copy=True, init_shuffle=True):
         '''Construct a DataSet.
         Args:
             init_shuffle, shuffle data before first epoch has been reached.
         Output:
-            original_pclouds, visible_pclouds, labels, (None or Feed) # TODO Rename
+            original_pclouds, labels, (None or Feed) # TODO Rename
         '''
 
         self.num_examples = point_clouds.shape[0]
@@ -245,10 +232,8 @@ class PointCloudDataSet(object):
 
         if copy:
             self.point_clouds = point_clouds.copy()
-            self.visible_point_clouds = visible_point_clouds.copy()
         else:
             self.point_clouds = point_clouds
-            self.visible_point_clouds = visible_point_clouds
 
         self.epochs_completed = 0
         self._index_in_epoch = 0
@@ -261,7 +246,6 @@ class PointCloudDataSet(object):
         perm = np.arange(self.num_examples)
         np.random.shuffle(perm)
         self.point_clouds = self.point_clouds[perm]
-        self.visible_point_clouds = self.visible_point_clouds[perm]
         self.labels = self.labels[perm]
         if self.noisy_point_clouds is not None:
             self.noisy_point_clouds = self.noisy_point_clouds[perm]
@@ -281,9 +265,9 @@ class PointCloudDataSet(object):
         end = self._index_in_epoch
 
         if self.noisy_point_clouds is None:
-            return self.point_clouds[start:end], self.visible_point_clouds[start:end], self.labels[start:end], None
+            return self.point_clouds[start:end], self.labels[start:end], None
         else:
-            return self.point_clouds[start:end], self.visible_point_clouds[start:end], self.labels[start:end], self.noisy_point_clouds[start:end]
+            return self.point_clouds[start:end], self.labels[start:end], self.noisy_point_clouds[start:end]
 
     def full_epoch_data(self, shuffle=True, seed=None):
         '''Returns a copy of the examples of the entire data set (i.e. an epoch's data), shuffled.
@@ -294,9 +278,8 @@ class PointCloudDataSet(object):
         if shuffle:
             np.random.shuffle(perm)
         pc = self.point_clouds[perm]
-        vpc = self.visible_point_clouds[perm]
         lb = self.labels[perm]
         ns = None
         if self.noisy_point_clouds is not None:
             ns = self.noisy_point_clouds[perm]
-        return pc, vpc, lb, ns
+        return pc, lb, ns

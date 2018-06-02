@@ -25,8 +25,8 @@ def rand_rotation_matrix(deflection=1.0, seed=None):
     theta, phi, z = randnums
 
     theta = theta * 2.0 * deflection * np.pi    # Rotation about the pole (Z).
-    phi = phi * 2.0 * np.pi     # For direction of pole deflection.
-    z = z * 2.0 * deflection    # For magnitude of pole deflection.
+    phi = 0 #phi * 2.0 * np.pi     # For direction of pole deflection.
+    z = 0 # z * 2.0 * deflection    # For magnitude of pole deflection.
 
     # Compute a vector V used for distributing points over the sphere
     # via the reflection I - V Transpose(V).  This formulation of V
@@ -65,6 +65,14 @@ def add_gaussian_noise_to_pcloud(pcloud, mu=0, sigma=1):
     return pcloud
 
 
+def get_visible_points(points):
+    n_points = int(len(points)/2)
+    ymean = np.mean(points[:, 1])
+    points = points[points[:, 1] > ymean]
+    points = points[np.random.choice(points.shape[0], n_points)] # allow duplicate
+    return points
+
+
 def apply_augmentations(batch, conf):
     if conf.gauss_augment is not None or conf.z_rotate:
         batch = batch.copy()
@@ -82,7 +90,9 @@ def apply_augmentations(batch, conf):
         r_rotation[2, 1] = 0
         r_rotation[2, 2] = 1
         batch = batch.dot(r_rotation)
-    return batch
+
+    batch_viz = np.array([get_visible_points(x) for x in batch])
+    return batch, batch_viz
 
 
 def unit_cube_grid_point_cloud(resolution, clip_sphere=False):

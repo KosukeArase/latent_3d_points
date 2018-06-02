@@ -9,7 +9,6 @@ import functools
 from six.moves import cPickle
 from multiprocessing import Pool
 
-from general_utils import rand_rotation_matrix
 from external.python_plyfile.plyfile import PlyElement, PlyData
 
 

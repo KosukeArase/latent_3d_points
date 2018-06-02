@@ -8,9 +8,78 @@ import numpy as np
 import os.path as osp
 from numpy.linalg import norm
 
-from autoencoder import Configuration as Conf
 from ae_templates import mlp_architecture_tl_net, default_train_params
-from in_out import create_dir
+from in_out import create_dir, pickle_data, unpickle_data
+
+
+class Configuration():
+    def __init__(self, n_input, encoder, decoder, embedder, encoder_args={}, decoder_args={}, embedder_args={},
+                 training_epochs=200, batch_size=10, learning_rate=0.001, denoising=False,
+                 saver_step=None, train_dir=None, z_rotate=False, input_color=False, output_color=False, loss='chamfer', gauss_augment=None,
+                 saver_max_to_keep=None, loss_display_step=1, debug=False,
+                 n_z=None, n_output=None, latent_vs_recon=1.0, consistent_io=None):
+
+        # Parameters for any AE
+        self.n_input = n_input
+        self.is_denoising = denoising
+        self.loss = loss.lower()
+        self.decoder = decoder
+        self.encoder = encoder
+        self.embedder = embedder
+        self.encoder_args = encoder_args
+        self.decoder_args = decoder_args
+        self.embedder_args = embedder_args
+
+        # Training related parameters
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.loss_display_step = loss_display_step
+        self.saver_step = saver_step
+        self.train_dir = train_dir
+        self.gauss_augment = gauss_augment
+        self.z_rotate = z_rotate
+        self.input_color = input_color
+        self.output_color = output_color
+        self.saver_max_to_keep = saver_max_to_keep
+        self.training_epochs = training_epochs
+        self.debug = debug
+
+        # Used in VAE
+        self.latent_vs_recon = np.array([latent_vs_recon], dtype=np.float32)[0]
+        self.n_z = n_z
+
+        # Used in AP
+        if n_output is None:
+            self.n_output = n_input
+        else:
+            self.n_output = n_output
+
+        self.consistent_io = consistent_io
+
+    def exists_and_is_not_none(self, attribute):
+        return hasattr(self, attribute) and getattr(self, attribute) is not None
+
+    def __str__(self):
+        keys = self.__dict__.keys()
+        vals = self.__dict__.values()
+        index = np.argsort(keys)
+        res = ''
+        for i in index:
+            if callable(vals[i]):
+                v = vals[i].__name__
+            else:
+                v = str(vals[i])
+            res += '%30s: %s\n' % (str(keys[i]), v)
+        return res
+
+    def save(self, file_name):
+        pickle_data(file_name + '.pickle', self)
+        with open(file_name + '.txt', 'w') as fout:
+            fout.write(self.__str__())
+
+    @staticmethod
+    def load(file_name):
+        return unpickle_data(file_name + '.pickle').next()
 
 
 def get_conf(class_name):
@@ -28,7 +97,7 @@ def get_conf(class_name):
     encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=n_output_feat)
     train_dir = create_dir(osp.join(top_out_dir, experiment_name))
 
-    conf = Conf(n_input = [n_pc_points, n_input_feat],
+    conf = Configuration(n_input = [n_pc_points, n_input_feat],
             n_output = [n_pc_points, n_output_feat],
             loss = ae_loss,
             training_epochs = train_params['training_epochs'],

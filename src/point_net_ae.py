@@ -11,7 +11,6 @@ import os.path as osp
 from tflearn.layers.conv import conv_1d
 from tflearn.layers.core import fully_connected
 
-from in_out import create_dir
 from autoencoder import AutoEncoder
 from general_utils import apply_augmentations
 

@@ -5,7 +5,55 @@ Created on November 26, 2017
 '''
 
 import numpy as np
+import os.path as osp
 from numpy.linalg import norm
+
+from autoencoder import Configuration as Conf
+from ae_templates import mlp_architecture_tl_net, default_train_params
+from in_out import create_dir
+
+
+def get_conf(class_name):
+    top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
+    experiment_name = '{}_tl'.format(class_name)
+    n_pc_points = 2048                # Number of points per model.
+    bneck_size = 128                  # Bottleneck-AE size
+    ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
+
+    train_params = default_train_params()
+
+    n_input_feat = 6 if train_params['input_color'] else 3
+    n_output_feat = 6 if train_params['output_color'] else 3
+
+    encoder, decoder, embedder, enc_args, dec_args, emb_args = mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=n_output_feat)
+    train_dir = create_dir(osp.join(top_out_dir, experiment_name))
+
+    conf = Conf(n_input = [n_pc_points, n_input_feat],
+            n_output = [n_pc_points, n_output_feat],
+            loss = ae_loss,
+            training_epochs = train_params['training_epochs'],
+            batch_size = train_params['batch_size'],
+            denoising = train_params['denoising'],
+            learning_rate = train_params['learning_rate'],
+            train_dir = train_dir,
+            loss_display_step = train_params['loss_display_step'],
+            saver_step = train_params['saver_step'],
+            z_rotate = train_params['z_rotate'],
+            input_color = train_params['input_color'],
+            output_color = train_params['output_color'],
+            encoder = encoder,
+            decoder = decoder,
+            embedder = embedder,
+            encoder_args = enc_args,
+            decoder_args = dec_args,
+            embedder_args = emb_args
+           )
+    conf.experiment_name = experiment_name
+    conf.held_out_step = 5   # How often to evaluate/print out loss on 
+                             # held_out data (if they are provided in ae.train() ).
+    conf.save(osp.join(train_dir, 'configuration'))
+
+    return conf
 
 
 def rand_rotation_matrix(deflection=1.0, seed=None):

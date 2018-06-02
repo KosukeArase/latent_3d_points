@@ -25,8 +25,8 @@ def parse_args():
           }
 
     parser = argparse.ArgumentParser(
-            prog="PC2PC TL network",
-            usage="python main.py [class_name] [options]", #Usage
+            prog="Visualizing PC2PC TL network",
+            usage="python visualize.py [class_name] [options]", #Usage
             add_help = True
             )
 

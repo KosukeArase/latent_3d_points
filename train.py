@@ -20,7 +20,7 @@ def parse_args():
           'input_color':True,
           'output_color': False,
           'loss_display_step': 1,
-          'experiment_name': 'hoge'
+          'experiment_name': 'tmp'
           }
 
     parser = argparse.ArgumentParser(
@@ -30,12 +30,14 @@ def parse_args():
             )
 
     parser.add_argument("class_name", help="Name of class (e.g. 'chair' or 'all' or 'all_w_clutter')")
+    parser.add_argument("experiment_name", help="Name of experiment")
     parser.add_argument("-n", "--n_points", help="Number of input points", default=2048, type=int)
     parser.add_argument("-c", "--input_color", action='store_true', help="Add color to input feature")
 
     args = parser.parse_args()
 
     params['class_name'] = args.class_name
+    params['experiment_name'] = args.experiment_name
     params['n_pc_points'] = args.n_points
     params['input_color'] = args.input_color
 
@@ -44,14 +46,10 @@ def parse_args():
 
 def main():
     params = parse_args()
-
-    # class_name = 'chair' #raw_input('Give me the class name (e.g. "chair"): ').lower()
-    # class_name = raw_input('Give me the class name (e.g. "chair" or "all" or "all_w_clutter"): ').lower()
-
     conf = get_conf(params)
 
     train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'
-    # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
+    train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
     test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
 
     reset_tf_graph()

@@ -57,21 +57,19 @@ def main():
     # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
     test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
 
-    all_pc_data = load_all_point_clouds_under_folder(train_dir, class_name, n_threads=20, file_ending='.ply', verbose=True)
-
     reset_tf_graph()
     ae = PointNetAutoEncoder(conf.experiment_name, conf)
 
     buf_size = 1 # Make 'training_stats' file to flush each output line regarding training.
     fout = open(osp.join(conf.train_dir, 'train_stats.txt'), 'a', buf_size)
+
+    all_pc_data = load_all_point_clouds_under_folder(train_dir, class_name, n_threads=20, file_ending='.ply', verbose=True)
     train_stats = ae.train(all_pc_data, conf, log_file=fout)
     fout.close()
 
     feed_pc, feed_pc_v, feed_model_names, _ = all_pc_data.next_batch(10)
     ae_reconstructions, v_reconstructions, _ = ae.reconstruct([feed_pc, feed_pc_v])
     # latent_codes = ae.transform(feed_pc)
-
-
 
 if __name__ == '__main__':
     main()

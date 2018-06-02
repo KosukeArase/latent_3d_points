@@ -69,7 +69,13 @@ def get_visible_points(points):
     n_points = int(len(points)/2)
     ymean = np.mean(points[:, 1])
     points = points[points[:, 1] > ymean]
+
     points = points[np.random.choice(points.shape[0], n_points)] # allow duplicate
+
+    mean = np.mean(points, axis=0)
+    std = np.std(points, axis=0)
+    points = (points - mean) / std
+
     return points
 
 

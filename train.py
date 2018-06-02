@@ -49,7 +49,7 @@ def main():
     conf = get_conf(params)
 
     train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'
-    train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
+    # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
     test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
 
     reset_tf_graph()

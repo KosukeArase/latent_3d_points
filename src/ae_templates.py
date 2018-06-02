@@ -11,8 +11,6 @@ from encoders_decoders import encoder_with_convs_and_symmetry, decoder_with_fc_o
 def mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=3, bneck_post_mlp=False):
     ''' Single class experiments.
     '''
-    if n_pc_points != 2048:
-        raise ValueError()
 
     encoder = encoder_with_convs_and_symmetry
     decoder = decoder_with_fc_only
@@ -51,16 +49,7 @@ def mlp_architecture_tl_net(n_pc_points, bneck_size, n_output_feat=3, bneck_post
 
 
 def default_train_params(single_class=True):
-    params = {'batch_size': 50,
-              'training_epochs': 2000,
-              'denoising': False,
-              'learning_rate': 0.0005,
-              'z_rotate': True,
-              'saver_step': 10,
-              'input_color': False,
-              'output_color': False,
-              'loss_display_step': 1
-              }
+
 
     if not single_class:
         params['z_rotate'] = True

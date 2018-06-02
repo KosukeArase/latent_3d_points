@@ -8,7 +8,7 @@ import numpy as np
 import os.path as osp
 from numpy.linalg import norm
 
-from ae_templates import mlp_architecture_tl_net, default_train_params
+from ae_templates import mlp_architecture_tl_net
 from in_out import create_dir, pickle_data, unpickle_data
 
 
@@ -82,14 +82,12 @@ class Configuration():
         return unpickle_data(file_name + '.pickle').next()
 
 
-def get_conf(class_name):
+def get_conf(class_name, train_params):
     top_out_dir = './data/'          # Use to save Neural-Net check-points etc.
-    experiment_name = '{}_tl'.format(class_name)
-    n_pc_points = 2048                # Number of points per model.
+    experiment_name = '/'.join([train_params['experiment_name'], class_name])
+    n_pc_points = train_params['n_pc_points']
     bneck_size = 128                  # Bottleneck-AE size
     ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
-
-    train_params = default_train_params()
 
     n_input_feat = 6 if train_params['input_color'] else 3
     n_output_feat = 6 if train_params['output_color'] else 3

@@ -50,8 +50,7 @@ def files_in_subdirs(top_dir, search_pattern):
                 yield full_name
 
 
-def load_txt(file_name, with_faces=False, with_color=False):
-    n_points = 2048
+def load_txt(file_name, n_points=2048, with_faces=False, with_color=False):
     n_features = 6 if with_color else 3
 
     if with_faces:
@@ -74,7 +73,7 @@ def load_txt(file_name, with_faces=False, with_color=False):
         return points
 
 
-def pc_loader(f_name, with_color=False):
+def pc_loader(f_name, n_points=2048, with_color=False):
     ''' loads a point-cloud saved under ShapeNet's "standar" folder scheme: 
     i.e. /syn_id/model_name.ply
     '''
@@ -82,7 +81,7 @@ def pc_loader(f_name, with_color=False):
         tokens = f_name.split('.')[1].split('/')
         model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
         synet_id = tokens[5].split('_')[0]
-        points = load_txt(f_name, with_color=with_color)
+        points = load_txt(f_name, n_points, with_color=with_color)
 
         return points, model_id, synet_id
     except Exception as e:
@@ -93,7 +92,7 @@ def pc_loader(f_name, with_color=False):
         return None, model_id, synet_id
 
 
-def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, with_color=False, verbose=False):
+def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, n_points=2048, with_color=False, verbose=False):
     if 'all' in class_name:
         class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
         file_names = []
@@ -107,13 +106,13 @@ def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, with_c
 
     print('Loading {} data'.format(len(file_names)))
 
-    pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, with_color=with_color, verbose=verbose)
+    pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, n_points=n_points, with_color=with_color, verbose=verbose)
     return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
 
 
-def load_point_clouds_from_filenames(file_names, n_threads, loader, with_color=False, verbose=False):
-    n_points = 2048
+def load_point_clouds_from_filenames(file_names, n_threads, loader, n_points=2048, with_color=False, verbose=False):
     n_features = 6 if with_color else 3 # XYZ or XYZRGB
+
     pclouds = np.empty([len(file_names), n_points, n_features], dtype=np.float32)
 
     model_names = np.empty([len(file_names)], dtype=object)
@@ -121,7 +120,7 @@ def load_point_clouds_from_filenames(file_names, n_threads, loader, with_color=F
     pool = Pool(n_threads)
     skipped = 0
 
-    for i, data in enumerate(pool.imap(functools.partial(loader, with_color=with_color), file_names)):
+    for i, data in enumerate(pool.imap(functools.partial(loader, n_points=n_points, with_color=with_color), file_names)):
         if data[0] is None:
             print(data[1:], "was skipped since it doesn't have enough points")
             skipped += 1

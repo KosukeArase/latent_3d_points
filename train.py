@@ -4,7 +4,7 @@ from src.point_net_ae import PointNetAutoEncoder
 from src.in_out import PointCloudDataSet, load_all_point_clouds_under_folder
 from src.tf_utils import reset_tf_graph
 from src.general_utils import get_conf
-from src.visualize import visualize
+from visualize import visualize
 
 import argparse
 
@@ -13,11 +13,12 @@ def parse_args():
     params = {'class_name': None,
           'n_pc_points': 2048,
           'batch_size': 50,
-          'training_epochs': 2000,
+          'training_epochs': 200,
           'denoising': False,
-          'learning_rate': 0.0005,
+          'gauss_augment': True, # False,
+          'learning_rate': 0.005,
           'z_rotate': True,
-          'saver_step': 100,
+          'saver_step': 10,
           'input_color':True,
           'output_color': False,
           'loss_display_step': 1,

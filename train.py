@@ -1,12 +1,11 @@
+import argparse
 import os.path as osp
 
+from visualize import visualize
 from src.point_net_ae import PointNetAutoEncoder
-from src.in_out import PointCloudDataSet, load_all_point_clouds_under_folder
+from src.in_out import load_all_point_clouds_under_folder
 from src.tf_utils import reset_tf_graph
 from src.general_utils import get_conf
-from visualize import visualize
-
-import argparse
 
 
 def parse_args():
@@ -36,6 +35,7 @@ def parse_args():
     parser.add_argument("-n", "--n_points", help="Number of input points", default=2048, type=int)
     parser.add_argument("-c", "--input_color", action='store_true', help="Add color to input feature")
     parser.add_argument("-v", "--visualize", action='store_true', help="Visualize the result")
+    parser.add_argument("-t", "--tiny", action='store_true', help="Using tiny data for debug")
 
     args = parser.parse_args()
 
@@ -44,15 +44,18 @@ def parse_args():
     params['n_pc_points'] = args.n_points
     params['input_color'] = args.input_color
 
-    return params
+    return args, params
 
 
 def main():
-    params = parse_args()
+    args, params = parse_args()
     conf = get_conf(params)
 
-    train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'
-    # train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
+    if args.tiny:
+        train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
+    else:
+        train_dir = './s3dis/Area_[1-5]/*/Annotations/{}_*.txt'
+
     test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
 
     reset_tf_graph()

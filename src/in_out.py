@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import re
 import glob
+import pickle
 import functools
 from six.moves import cPickle
 from multiprocessing import Pool
@@ -77,32 +78,52 @@ def pc_loader(f_name, n_points=2048, with_color=False):
     ''' loads a point-cloud saved under ShapeNet's "standar" folder scheme: 
     i.e. /syn_id/model_name.ply
     '''
-    try:
-        tokens = f_name.split('.')[1].split('/')
-        model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
-        synet_id = tokens[5].split('_')[0]
-        points = load_txt(f_name, n_points, with_color=with_color)
 
-        return points, model_id, synet_id
+    tokens = f_name.split('.')[1].split('/')
+    model_name = '_'.join([tokens[2], tokens[3], tokens[5]])
+    class_name = tokens[5].split('_')[0]
+
+    try:
+        points = load_txt(f_name, n_points, with_color=with_color)
     except Exception as e:
         print('error in pc_loader while proccesing', f_name, e)
-        tokens = f_name.split('.')[1].split('/')
-        model_id = '_'.join([tokens[2], tokens[3], tokens[5]])
-        synet_id = tokens[5].split('_')[0]
-        return None, model_id, synet_id
+        points = None
+
+    return points, model_name, class_name
 
 
 def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, n_points=2048, with_color=False, verbose=False):
-    if 'all' in class_name:
-        class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
-        file_names = []
-        for name in class_names:
-            file_names += glob.glob(top_dir.format(name))
-
-        if class_name == 'all_w_clutter':
-            file_names += glob.glob(top_dir.format('clutter'))
+    if '6' in top_dir:
+        data_type = 'test'
+    elif '4' in top_dir:
+        data_type = 'train_small'
+    elif '1-5' in top_dir:
+        data_type = 'train'
     else:
-        file_names = glob.glob(top_dir.format(class_name))
+        print(top_dir, 'is an invalid dir')
+        raise NotImplementedError
+
+    glob_file = './s3dis/filenames/{}_{}.pkl'.format(data_type, class_name)
+
+    if os.path.exists(glob_file):
+        with open(glob_file, 'r') as f:
+            file_names = pickle.load(f)
+            print('Data paths are loaded.')
+    else:
+        if 'all' in class_name:
+            class_names = ['table', 'chair', 'sofa', 'bookcase', 'board']
+            file_names = []
+            for name in class_names:
+                file_names += glob.glob(top_dir.format(name))
+
+            if class_name == 'all_w_clutter':
+                file_names += glob.glob(top_dir.format('clutter'))
+        else:
+            file_names = glob.glob(top_dir.format(class_name))
+
+        with open(glob_file, 'w') as f:
+            pickle.dump(file_names, f)
+            print('Data paths are created.')
 
     print('Loading {} data'.format(len(file_names)))
 

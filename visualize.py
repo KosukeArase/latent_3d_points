@@ -13,19 +13,17 @@ from src.general_utils import get_conf, get_visible_points
 
 
 def parse_args():
-    params = {'class_name': None,
+    params = {
           'n_pc_points': 2048,
           'batch_size': 50,
-          'training_epochs': 2000,
+          'training_epochs': 1000,
           'denoising': False,
           'gauss_augment': False,
-          'learning_rate': 0.0005,
+          'learning_rate': 0.002,
           'z_rotate': False,
           'saver_step': 100,
-          'input_color':True,
           'output_color': False,
           'loss_display_step': 1,
-          'experiment_name': 'tmp'
           }
 
     parser = argparse.ArgumentParser(
@@ -37,6 +35,7 @@ def parse_args():
     parser.add_argument("class_name", help="Name of class (e.g. 'chair' or 'all' or 'all_w_clutter')")
     parser.add_argument("experiment_name", help="Name of experiment")
     parser.add_argument("-n", "--n_points", help="Number of input points", default=2048, type=int)
+    parser.add_argument("-l", "--loss", help="Loss type", default='emd', type=str)
     parser.add_argument("-c", "--input_color", action='store_true', help="Add color to input feature")
 
     args = parser.parse_args()
@@ -45,15 +44,17 @@ def parse_args():
     params['experiment_name'] = args.experiment_name
     params['n_pc_points'] = args.n_points
     params['input_color'] = args.input_color
+    params['ae_loss'] = args.loss
 
     return params
 
 
-def get_trace(_x, _y, _z, _color='rgb(255, 0, 0)'):
+def get_trace(_x, _y, _z, name, _color=None):
     trace = go.Scatter3d(
         x=_x,
         y=_y,
         z=_z,
+        name=name,
         mode='markers',
         marker=dict(
             sizemode='diameter',
@@ -67,21 +68,32 @@ def get_trace(_x, _y, _z, _color='rgb(255, 0, 0)'):
     return trace
 
 
-def visualize(experiment_name, class_name, gts, recs, vgts, vrecs, n=3):
+def get_scene(X, Y):
+    range_max = np.maximum(np.max(X, axis=0), np.max(Y, axis=0))
+    range_min = np.minimum(np.min(X, axis=0), np.min(Y, axis=0))
+    x_range, y_range, z_range = np.hstack([range_min.reshape(3,1), range_max.reshape(3,1)])
+    scene = dict(xaxis=dict(range=x_range), yaxis=dict(range=y_range), zaxis=dict(range=z_range), aspectratio=dict(x=1,y=1,z=1))
+
+    return scene
+
+
+def visualize(experiment_name, class_name, gts, recs, vgts, vrecs, n=5):
     path = os.path.join('./html', experiment_name)
     create_dir(path)
 
     for i, [gt, rec, vgt, vrec] in enumerate(zip(gts, recs, vgts, vrecs)):
-        trace0 = get_trace(rec[:, 0], rec[:, 1], rec[:, 2], 'rgb(255, 0, 0)') # reconstructed by AE, red
-        trace1 = get_trace(gt[:, 0], gt[:, 1], gt[:, 2], 'rgb(0, 0, 255)') # GT (input), blue
-        layout=dict(height=600, width=600, title='_'.join([experiment_name, class_name, 'AE']))
-        fig=dict(data=[trace0, trace1], layout=layout)
+        trace = get_trace(gt[:, 0], gt[:, 1], gt[:, 2], 'input (gt)') # GT (input), blue
+        trace1 = get_trace(rec[:, 0], rec[:, 1], rec[:, 2], 'recon') # reconstructed by AE, red
+        scene=get_scene(gt, rec)
+        layout=dict(height=600, width=600, scene=scene, title='_'.join([experiment_name, class_name, 'AE']))
+        fig=dict(data=[trace, trace1], layout=layout)
         offline.plot(fig, filename=os.path.join('./html', experiment_name, '_'.join([class_name, 'AE', str(i) + '.html'])))
 
-        trace0 = get_trace(vrec[:, 0], vrec[:, 1], vrec[:, 2], 'rgb(255, 0, 0)') # reconstructed by TL, red
-        trace1 = get_trace(vgt[:, 0], vgt[:, 1], vgt[:, 2], 'rgb(0, 0, 255)') # input (visible surface), blue
-        layout=dict(height=600, width=600, title='_'.join([experiment_name, class_name, 'TL']))
-        fig=dict(data=[trace0, trace1], layout=layout)
+        trace0 = get_trace(vgt[:, 0], vgt[:, 1], vgt[:, 2], 'input') # input (visible surface), blue
+        trace1 = get_trace(vrec[:, 0], vrec[:, 1], vrec[:, 2], 'recon') # reconstructed by TL, red
+        scene=get_scene(gt, rec)
+        layout=dict(height=600, width=600, scene=scene, title='_'.join([experiment_name, class_name, 'TL']))
+        fig=dict(data=[trace, trace1, trace0], layout=layout)
         offline.plot(fig, filename=os.path.join('./html', experiment_name, '_'.join([class_name, 'TL', str(i) + '.html'])))
 
         if i >= n-1:
@@ -113,7 +125,7 @@ def main():
 
     print('finish inference')
 
-    visualize(params['experiment_name'], params['class_name'], feed_pc, ae_reconstructions, feed_pc_v_org, v_reconstructions)
+    visualize(params['experiment_name'], params['class_name'], feed_pc[:, :, :3], ae_reconstructions, feed_pc_v_org[:, :, :3], v_reconstructions)
 
 
 if __name__ == '__main__':

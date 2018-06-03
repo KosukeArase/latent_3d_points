@@ -89,7 +89,7 @@ def get_conf(train_params):
     ckpt_path = '/'.join([train_params['experiment_name'], class_name])
     n_pc_points = train_params['n_pc_points']
     bneck_size = 128                  # Bottleneck-AE size
-    ae_loss = 'emd'                   # Loss to optimize: 'emd' or 'chamfer'
+    ae_loss = train_params['ae_loss']                   # Loss to optimize: 'emd' or 'chamfer'
 
     n_input_feat = 6 if train_params['input_color'] else 3
     n_output_feat = 6 if train_params['output_color'] else 3

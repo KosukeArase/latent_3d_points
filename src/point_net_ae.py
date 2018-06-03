@@ -76,8 +76,8 @@ class PointNetAutoEncoder(AutoEncoder):
             self.sess.run(self.init)
 
     def _create_loss(self):
-        lambda_x = 0.2
-        lambda_z = 1
+        lambda_x = 1.0
+        lambda_z = 1.0
         c = self.configuration
 
         n_output_feat = c.n_output[1]

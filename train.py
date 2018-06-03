@@ -1,5 +1,6 @@
 import argparse
 import os.path as osp
+import os
 
 from visualize import visualize
 from src.point_net_ae import PointNetAutoEncoder
@@ -9,20 +10,17 @@ from src.general_utils import get_conf
 
 
 def parse_args():
-    params = {'class_name': None,
+    params = {
           'n_pc_points': 2048,
           'batch_size': 50,
-          'training_epochs': 200,
+          'training_epochs': 1000,
           'denoising': False,
-          'gauss_augment': True, # False,
-          'learning_rate': 0.005,
+          'learning_rate': 0.002,
           'z_rotate': True,
-          'saver_step': 10,
-          'input_color':True,
+          'saver_step': 50,
           'output_color': False,
           'loss_display_step': 1,
-          'experiment_name': 'tmp'
-          }
+           }
 
     parser = argparse.ArgumentParser(
             prog="Training PC2PC TL network",
@@ -33,7 +31,9 @@ def parse_args():
     parser.add_argument("class_name", help="Name of class (e.g. 'chair' or 'all' or 'all_w_clutter')")
     parser.add_argument("experiment_name", help="Name of experiment")
     parser.add_argument("-n", "--n_points", help="Number of input points", default=2048, type=int)
+    parser.add_argument("-l", "--loss", help="Loss type", default='emd', type=str)
     parser.add_argument("-c", "--input_color", action='store_true', help="Add color to input feature")
+    parser.add_argument("-a", "--add_noise", action='store_true', help="Add noise to input feature")
     parser.add_argument("-v", "--visualize", action='store_true', help="Visualize the result")
     parser.add_argument("-t", "--tiny", action='store_true', help="Using tiny data for debug")
 
@@ -43,6 +43,8 @@ def parse_args():
     params['experiment_name'] = args.experiment_name
     params['n_pc_points'] = args.n_points
     params['input_color'] = args.input_color
+    params['ae_loss'] = args.loss
+    params['gauss_augment'] = args.add_noise
 
     return args, params
 
@@ -50,6 +52,7 @@ def parse_args():
 def main():
     args, params = parse_args()
     conf = get_conf(params)
+    print(conf)
 
     if args.tiny:
         train_dir = './s3dis/Area_4/*/Annotations/{}_*.txt'
@@ -77,12 +80,13 @@ def main():
         conf.z_rotate = False
         conf.gauss_augment = None
 
+        ckpt_path = os.path.join('./data/', params['experiment_name'], params['class_name'])
+        epoch = conf.training_epochs
+
         reset_tf_graph()
         ae = PointNetAutoEncoder(conf.experiment_name, conf)
         ae.restore_model(ckpt_path, epoch, verbose=True)
 
-        ckpt_path = os.path.join('./data/', params['experiment_name'], params['class_name'])
-        epoch = conf.training_epochs
         all_pc_data = load_all_point_clouds_under_folder(test_dir, params['class_name'], n_points=conf.n_input[0], with_color=conf.input_color, n_threads=20, verbose=True)
         all_pc_data.shuffle_data()
 
@@ -94,7 +98,7 @@ def main():
 
         ae_reconstructions, v_reconstructions, _ = ae.reconstruct([feed_pc, feed_pc_v], compute_loss=False)
 
-        visualize(params['experiment_name'], params['class_name'], feed_pc, ae_reconstructions, feed_pc_v_org, v_reconstructions, 3)
+        visualize(params['experiment_name'], params['class_name'], feed_pc[:, :, :3], ae_reconstructions, feed_pc_v_org[:, :, :3], v_reconstructions, 3)
 
         print('Finish visualize')
 

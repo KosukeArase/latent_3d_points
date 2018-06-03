@@ -11,19 +11,17 @@ from src.evaluation_metrics import minimum_mathing_distance, jsd_between_point_c
 from src.general_utils import get_conf
 
 def parse_args():
-    params = {'class_name': None,
+    params = {
           'n_pc_points': 2048,
           'batch_size': 50,
-          'training_epochs': 200,
+          'training_epochs': 1000,
           'denoising': False,
           'gauss_augment': False,
-          'learning_rate': 0.0005,
+          'learning_rate': 0.002,
           'z_rotate': False,
           'saver_step': 100,
-          'input_color':True,
           'output_color': False,
           'loss_display_step': 1,
-          'experiment_name': 'tmp'
           }
 
     parser = argparse.ArgumentParser(
@@ -35,6 +33,7 @@ def parse_args():
     parser.add_argument("class_name", help="Name of class (e.g. 'chair' or 'all' or 'all_w_clutter')")
     parser.add_argument("experiment_name", help="Name of experiment")
     parser.add_argument("-n", "--n_points", help="Number of input points", default=2048, type=int)
+    parser.add_argument("-l", "--loss", help="Loss type", default='emd', type=str)
     parser.add_argument("-c", "--input_color", action='store_true', help="Add color to input feature")
 
     args = parser.parse_args()
@@ -43,6 +42,7 @@ def parse_args():
     params['experiment_name'] = args.experiment_name
     params['n_pc_points'] = args.n_points
     params['input_color'] = args.input_color
+    params['ae_loss'] = args.loss
 
     return params
 
@@ -65,6 +65,9 @@ def main():
     all_pc_data = load_all_point_clouds_under_folder(test_dir, params['class_name'], n_points=conf.n_input[0], with_color=conf.input_color, n_threads=20, verbose=True)
 
     ae_recon, tl_recon, data_loss, labels, gt, gt_tl = ae.evaluate(all_pc_data, conf) # gt_tl is not normalized to compare with gt
+
+    if conf.input_color:
+        gt = gt[:, :, :3]
 
     ae_loss = conf.loss  # Which distance to use for the matchings.
     assert ae_loss in ['emd', 'chamfer']

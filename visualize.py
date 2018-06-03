@@ -1,17 +1,15 @@
 import os
 import pickle
 import argparse
-import numpy as np
 import matplotlib
-
-from src.point_net_ae import PointNetAutoEncoder
-from src.in_out import PointCloudDataSet, load_all_point_clouds_under_folder, create_dir
-from src.tf_utils import reset_tf_graph
-from src.general_utils import get_conf, get_visible_points
-
-
+import numpy as np
 import plotly.offline as offline
 import plotly.graph_objs as go
+
+from src.point_net_ae import PointNetAutoEncoder
+from src.in_out import load_all_point_clouds_under_folder, create_dir
+from src.tf_utils import reset_tf_graph
+from src.general_utils import get_conf, get_visible_points
 
 
 def parse_args():
@@ -22,7 +20,7 @@ def parse_args():
           'denoising': False,
           'gauss_augment': False,
           'learning_rate': 0.0005,
-          'z_rotate': True,
+          'z_rotate': False,
           'saver_step': 100,
           'input_color':True,
           'output_color': False,
@@ -95,15 +93,13 @@ def main():
     conf = get_conf(params)
 
     ckpt_path = os.path.join('./data/', params['experiment_name'], params['class_name'])
-
-    epoch = 200
-
-    test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
+    epoch = conf.training_epochs
 
     reset_tf_graph()
     ae = PointNetAutoEncoder(conf.experiment_name, conf)
     ae.restore_model(ckpt_path, epoch, verbose=True)
 
+    test_dir = './s3dis/Area_6/*/Annotations/{}_*.txt'
     all_pc_data = load_all_point_clouds_under_folder(test_dir, params['class_name'], n_points=conf.n_input[0], with_color=conf.input_color, n_threads=20, verbose=True)
 
     all_pc_data.shuffle_data()

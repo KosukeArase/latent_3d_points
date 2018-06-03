@@ -128,7 +128,7 @@ def load_all_point_clouds_under_folder(top_dir, class_name, n_threads=20, n_poin
     print('Loading {} data'.format(len(file_names)))
 
     pclouds, model_ids, syn_ids = load_point_clouds_from_filenames(file_names, n_threads, loader=pc_loader, n_points=n_points, with_color=with_color, verbose=verbose)
-    return PointCloudDataSet(pclouds, labels=syn_ids + '_' + model_ids, init_shuffle=False)
+    return PointCloudDataSet(pclouds, labels=model_ids, init_shuffle=False)
 
 
 def load_point_clouds_from_filenames(file_names, n_threads, loader, n_points=2048, with_color=False, verbose=False):

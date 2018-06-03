@@ -74,6 +74,9 @@ def main():
 
     if visualize:
         print('Start visualizing')
+        conf.z_rotate = False
+        conf.gauss_augment = None
+
         reset_tf_graph()
         ae = PointNetAutoEncoder(conf.experiment_name, conf)
         ae.restore_model(ckpt_path, epoch, verbose=True)

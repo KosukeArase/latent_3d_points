@@ -77,7 +77,7 @@ class AutoEncoder(Neural_Net):
         '''Use AE to reconstruct given data.
         GT will be used to measure the loss (e.g., if X is a noisy version of the GT)'''
         if compute_loss:
-            loss = self.loss
+            loss = self.total_loss
         else:
             loss = tf.no_op()
 
@@ -160,37 +160,26 @@ class AutoEncoder(Neural_Net):
 
         return stats
 
-    def evaluate(self, in_data, configuration, ret_pre_augmentation=False):
+    def evaluate(self, in_data, configuration):
         n_examples = in_data.num_examples
         data_loss = 0.
-        pre_aug = None
-        if self.is_denoising:
-            original_data, ids, feed_data = in_data.full_epoch_data(shuffle=False)
-            if ret_pre_augmentation:
-                pre_aug = feed_data.copy()
-            if feed_data is None:
-                feed_data = original_data
-            feed_data = apply_augmentations(feed_data, configuration)  # This is a new copy of the batch.
-        else:
-            original_data, ids, _ = in_data.full_epoch_data(shuffle=False)
-            feed_data = apply_augmentations(original_data, configuration)
+
+        feed_data, ids, _ = in_data.full_epoch_data(shuffle=False)
 
         b = configuration.batch_size
-        reconstructions = np.zeros([n_examples] + self.n_output)
+        ae_recon = np.zeros([n_examples] + self.n_output)
+        v_recon = np.zeros([n_examples] + self.n_output)
+
         for i in xrange(0, n_examples, b):
-            if self.is_denoising:
-                reconstructions[i:i + b], loss = self.reconstruct(feed_data[i:i + b], original_data[i:i + b])
-            else:
-                reconstructions[i:i + b], loss = self.reconstruct(feed_data[i:i + b])
+            feed_data_v, feed_data_v_org = np.split(np.array([get_visible_points(x, org=True) for x in feed_data[i:i + b]]), 2, axis=1) # [normalized_pcs, original_pcs]
+            feed_data_v = np.squeeze(feed_data_v)
+            ae_recon[i:i + b], v_recon[i:i + b], loss = self.reconstruct([feed_data[i:i + b], feed_data_v])
 
             # Compute average loss
-            data_loss += (loss * len(reconstructions[i:i + b]))
-        data_loss /= float(n_examples)
+            data_loss += (loss * b)
 
-        if pre_aug is not None:
-            return reconstructions, data_loss, np.squeeze(feed_data), ids, np.squeeze(original_data), pre_aug
-        else:
-            return reconstructions, data_loss, np.squeeze(feed_data), ids, np.squeeze(original_data)
+        data_loss /= float(n_examples)
+        return ae_recon, v_recon, data_loss, ids, np.squeeze(feed_data), np.squeeze(feed_data_v_org)
 
     def evaluate_one_by_one(self, in_data, configuration):
         '''Evaluates every data point separately to recover the loss on it. Thus, the batch_size = 1 making it

@@ -112,8 +112,6 @@ class AutoEncoder(Neural_Net):
         c = configuration
         stats = []
 
-        self.opt = self.train_step1
-        self.loss = self.x_loss
         print('==============\nFirst Training Stage\n==============')
 
         if c.saver_step is not None:

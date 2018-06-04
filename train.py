@@ -18,6 +18,7 @@ def parse_args():
           'learning_rate': 0.002,
           'z_rotate': True,
           'saver_step': 50,
+          'summary_step': 50,
           'output_color': False,
           'loss_display_step': 1,
            }

@@ -5,6 +5,7 @@ Created on January 26, 2017
 '''
 
 import time
+import copy
 import tensorflow as tf
 import os.path as osp
 
@@ -29,10 +30,11 @@ class PointNetAutoEncoder(AutoEncoder):
     def __init__(self, name, configuration, graph=None):
         c = configuration
         self.configuration = c
+        input_summaries = copy.copy(tf.get_collection(tf.GraphKeys.SUMMARIES))
 
         AutoEncoder.__init__(self, name, graph, configuration)
 
-        with tf.variable_scope(name):
+        with tf.variable_scope(name) as scope:
             self.z = c.encoder(self.x, **c.encoder_args)
             self.vz = c.embedder(self.vx, **c.embedder_args)
 
@@ -52,8 +54,18 @@ class PointNetAutoEncoder(AutoEncoder):
             
             self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=c.saver_max_to_keep)
 
+            self.summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
+            self.summaries.extend(input_summaries)
+
             self._create_loss()
             self._setup_optimizer()
+
+            self.summary.append(tf.summary.scalar('learning_rate', self.lr))
+            for var in tf.trainable_variables():
+                self.summaries.append(tf.summary.histogram(var.op.name, var))
+
+            self.opt = self.train_step1
+            self.loss = self.x_loss
 
             # GPU configuration
             if hasattr(c, 'allow_gpu_growth'):
@@ -99,6 +111,21 @@ class PointNetAutoEncoder(AutoEncoder):
         self.z_total_loss *= lambda_z
         self.total_loss = self.x_loss + self.z_total_loss
 
+        losses = [self.x_loss, self.vz_loss, self.z_total_loss, self.total_loss]
+
+        # Compute the moving average of all individual losses and the total loss.
+        # loss_averages = tf.train.ExponentialMovingAverage(0.9, name='avg')
+        # loss_averages_op = loss_averages.apply(losses)
+
+        # Attach a scalar summmary to all individual losses and the total loss; do the
+        # same for the averaged version of the losses.
+        for loss in losses:
+            loss_name = loss.op.name
+            tf.summary.scalar(loss_name + ' (raw)', loss)
+            # tf.summary.scalar(loss_name, loss_averages.average(loss))
+        # with tf.control_dependencies([loss_averages_op]):
+            # self.total_loss = tf.identity(self.total_loss)
+
 
         reg_losses = self.graph.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         if c.exists_and_is_not_none('w_reg_alpha'):
@@ -117,7 +144,6 @@ class PointNetAutoEncoder(AutoEncoder):
         if hasattr(c, 'exponential_decay'):
             self.lr = tf.train.exponential_decay(c.learning_rate, self.epoch, c.decay_steps, decay_rate=0.5, staircase=True, name="learning_rate_decay")
             self.lr = tf.maximum(self.lr, 1e-5)
-            tf.summary.scalar('learning_rate', self.lr)
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self.train_step1 = self.optimizer.minimize(self.x_loss)

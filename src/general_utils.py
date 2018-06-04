@@ -15,7 +15,7 @@ from in_out import create_dir, pickle_data, unpickle_data
 class Configuration():
     def __init__(self, n_input, encoder, decoder, embedder, encoder_args={}, decoder_args={}, embedder_args={},
                  training_epochs=200, batch_size=10, learning_rate=0.001, denoising=False,
-                 saver_step=None, train_dir=None, z_rotate=False, input_color=False, output_color=False, loss='chamfer', gauss_augment=None,
+                 saver_step=None, summary_step=None, train_dir=None, z_rotate=False, input_color=False, output_color=False, loss='chamfer', gauss_augment=None,
                  saver_max_to_keep=None, loss_display_step=1, debug=False,
                  n_z=None, n_output=None, latent_vs_recon=1.0, consistent_io=None):
 
@@ -35,6 +35,7 @@ class Configuration():
         self.learning_rate = learning_rate
         self.loss_display_step = loss_display_step
         self.saver_step = saver_step
+        self.summary_step = summary_step
         self.train_dir = train_dir
         self.gauss_augment = {'mu': 0., 'sigma': 0.1} if gauss_augment else None
         self.z_rotate = z_rotate
@@ -108,6 +109,7 @@ def get_conf(train_params):
             train_dir = train_dir,
             loss_display_step = train_params['loss_display_step'],
             saver_step = train_params['saver_step'],
+            summary_step = train_params['summary_step'],
             z_rotate = train_params['z_rotate'],
             input_color = train_params['input_color'],
             output_color = train_params['output_color'],

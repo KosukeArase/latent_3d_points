@@ -60,7 +60,7 @@ class PointNetAutoEncoder(AutoEncoder):
             self._create_loss()
             self._setup_optimizer()
 
-            self.summary.append(tf.summary.scalar('learning_rate', self.lr))
+            self.summaries.append(tf.summary.scalar('learning_rate', self.lr))
             for var in tf.trainable_variables():
                 self.summaries.append(tf.summary.histogram(var.op.name, var))
 
@@ -77,7 +77,7 @@ class PointNetAutoEncoder(AutoEncoder):
             config.gpu_options.allow_growth = growth
 
             # Summaries
-            self.merged_summaries = tf.summary.merge_all()
+            self.merged_summaries = tf.summary.merge(self.summaries)
             self.train_writer = tf.summary.FileWriter(osp.join(configuration.train_dir, 'summaries'), self.graph)
 
             # Initializing the tensor flow variables

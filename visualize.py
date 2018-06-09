@@ -125,7 +125,7 @@ def main():
 
     print('finish inference')
 
-    visualize(params['experiment_name'], params['class_name'], feed_pc[:, :, :3], ae_reconstructions, feed_pc_v_org[:, :, :3], v_reconstructions)
+    visualize(params['experiment_name'], params['class_name'], feed_pc[:, :, :3], ae_reconstructions, feed_pc_v_org[:, :, :3], v_reconstructions, 10)
 
 
 if __name__ == '__main__':
